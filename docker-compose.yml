@@ -10,7 +10,7 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - TOKEN=${TOKEN}
-      - MONGO_URI=mongodb://mongo:27028/wintonbot
+      - MONGO_URI=mongodb://mongo:27017/wintonbot
     depends_on:
       - mongo
 
@@ -18,7 +18,7 @@ services:
     image: mongo:6.0
     container_name: winton-corner-bot-mongo
     ports:
-      - "27028:27017"
+      - "27017:27028"
     volumes:
       - mongo_data:/data/db
 
