@@ -54,9 +54,12 @@ class OverwatchAPI:
                 f"Unexpected error: {response.text}"
             )
             raise OverwatchAPIError(response.status_code, error_message, response=response)
-            
+
         except RequestException as e:
             logging.error(f"Network error while fetching player summary: {str(e)}")
+            raise
+        except Exception as e:
+            logging.error(f"Unknown error occurred: {e}")
             raise
 
 def get_player_summary(
@@ -125,6 +128,6 @@ def get_player_summary(
             time.sleep(delay)
             attempt += 1
             
-        except RequestException as e:
+        except Exception as e:
             logging.error(f"Network error for {player_id}: {str(e)}")
             return None
