@@ -290,6 +290,10 @@ class Leaderboard(commands.Cog):
             print(f"Error updating leaderboard: {str(e)}")
 
 
+    # @update_leaderboard.before_loop
+    # async def before_update_leaderboard(self):
+    #     await self.bot.wait_until_ready()
+
     @commands.slash_command(name="updateleaderboard", description="Manually update the leaderboard")
     async def update_leaderboard_command(self, ctx: discord.ApplicationContext):
         try:
@@ -300,35 +304,32 @@ class Leaderboard(commands.Cog):
             await ctx.respond("An error occurred while updating the leaderboard!", ephemeral=True)
 
     @commands.slash_command(name="registerplayer", description="Register a player to track their stats")
-        async def register_player(ctx: discord.ApplicationContext, username: str):
-            username = username.strip()
-            # validate for valid blizzard username
-            # check for presence of one '#'
-            if not username or '#' not in username:
-                await ctx.respond("Please provide a valid Blizzard username (e.g., Player#123456).", ephemeral=True)
+    async def register_player(self, ctx: discord.ApplicationContext, username: str):
+        username = username.strip()
+        # validate for valid blizzard username
+        # check for presence of one '#'
+        if not username or '#' not in username:
+            await ctx.respond("Please provide a valid Blizzard username (e.g., Player#123456).", ephemeral=True)
+            return
+        # check for tag length
+        tag = username.split('#')[-1]
+        if len(tag) > 6 or len(tag) < 4 or not tag.isdigit():
+            await ctx.respond("Please provide a valid Blizzard username with a tag (e.g., Player#123456).", ephemeral=True)
+            return
+        
+        # store in database
+        try:
+            existing_player = self.player_stats_collection.find_one({"discord_id": ctx.author.id})
+            if existing_player:
+                await ctx.respond("You are already registered.", ephemeral=True)
                 return
-            # check for tag length
-            tag = username.split('#')[-1]
-            if len(tag) > 6 or len(tag) < 4 or not tag.isdigit():
-                await ctx.respond("Please provide a valid Blizzard username with a tag (e.g., Player#123456).",
-                                  ephemeral=True)
-                return
-
-            # store in database
-            try:
-                existing_player = self.player_stats_collection.find_one({"discord_id": ctx.author.id})
-                if existing_player:
-                    await ctx.respond("You are already registered.", ephemeral=True)
-                    return
-                new_player = PlayerStat(discord_id=ctx.author.id, blizzard_username=username)
-                self.player_stats_collection.insert_one(new_player.__dict__)
-                # fetch adhoc
-                await self.fetch_player_stats()
-                await ctx.respond(f"Successfully registered {username}!", ephemeral=True)
-                return
-            except Exception as e:
-                await ctx.respond("An error occurred while registering. Please try again later.", ephemeral=True)
-                return
+            new_player = PlayerStat(discord_id=ctx.author.id, blizzard_username=username)
+            self.player_stats_collection.insert_one(new_player.__dict__)
+            # fetch adhoc
+            await self.fetch_player_stats()
+            await ctx.respond(f"Successfully registered {username}!", ephemeral=True)
+        except Exception as e:
+            await ctx.respond("An error occurred while registering. Please try again later.", ephemeral=True)
 
 
     @tasks.loop(hours=1)
