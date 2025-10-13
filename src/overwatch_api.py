@@ -5,16 +5,6 @@ import time
 from random import uniform
 
 
-class OverwatchAPIError(Exception):
-    """Custom exception for Overwatch API errors"""
-
-    def __init__(self, status_code: int, message: str, response=None):
-        self.status_code = status_code
-        self.message = message
-        self.response = response
-        super().__init__(f"API Error {status_code}: {message}")
-
-
 class OverwatchAPI:
     def __init__(self):
         self.BASE_URL = "https://overfast-api.tekrop.fr"
@@ -40,7 +30,7 @@ class OverwatchAPI:
 
                 if e.response.status_code not in [429]:
                     logging.error(f"Non-retryable error for {player_id}: {str(e)}")
-                    return None
+                    raise
 
                 if retry_attempt == max_retries:
                     return None
