@@ -6,7 +6,7 @@ import mongo
 load_dotenv()
 
 mongo.init(os.getenv('MONGO_URI', 'mongodb://mongo:27017/wintonbot'), 'winton_bot')
-bot = discord.Bot(debug_guilds=[1425571463192121354])
+bot = discord.Bot(debug_guilds=os.getenv('BOT_DEV_GUILDS', '1425571463192121354').split(';'))
 
 COCKS = [
     "cogs.leaderboard"
