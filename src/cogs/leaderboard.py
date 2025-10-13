@@ -26,6 +26,17 @@ class Leaderboard(commands.Cog):
     def __init__(self, bot: discord.Bot):
         self.bot = bot
 
+        self.leaderboard_channel = 1426238135876190321
+        self.rank_values = {
+            'grandmaster': 7,
+            'master': 6,
+            'diamond': 5,
+            'platinum': 4,
+            'gold': 3,
+            'silver': 2,
+            'bronze': 1
+        }
+
         try:
             self.player_stats_collection = get_collection("PlayerStat")
             print("Player stats collection initialized")
@@ -34,6 +45,7 @@ class Leaderboard(commands.Cog):
             raise RuntimeError("Failed to initialize player stats collection")
 
         self.fetch_player_stats.start()
+        self.update_leaderboard.start()
 
     @tasks.loop(hours=1)
     async def fetch_player_stats(self):
@@ -181,7 +193,113 @@ class Leaderboard(commands.Cog):
                 print(f"Error showing stats: {str(e)}")
                 await ctx.respond("An error occurred while fetching your stats!", ephemeral=True)
 
-        @self.bot.slash_command(name="registerplayer", description="Register a player to track their stats")
+    def get_player_rank_value(self, player_stats):
+        if not player_stats.get('competitive') or not player_stats['competitive'].get('pc'):
+            return -1
+        
+        comp_data = player_stats['competitive']['pc']
+        if not comp_data:
+            return -1
+        
+        division = comp_data.get('division', '').lower()
+        tier = comp_data.get('tier', 5)  # Default to lowest tier
+        
+        base_value = self.rank_values.get(division, 0)
+        return base_value * 5 + (5 - tier)
+
+    async def create_role_leaderboard(self, role: str):
+        all_players = list(self.player_stats_collection.find())
+        ranked_players = []
+        
+        for player in all_players:
+            if not player.get('stats') or not player['stats'][-1].get('competitive'):
+                continue
+                
+            latest_stats = player['stats'][-1]
+            comp_data = latest_stats['competitive'].get('pc', {})
+            
+            if not comp_data or not comp_data.get(role):
+                continue
+                
+            role_data = comp_data[role]
+            ranked_players.append({
+                'discord_id': player['discord_id'],
+                'username': latest_stats['username'],
+                'blizzard_username': player['blizzard_username'],
+                'avatar': latest_stats['avatar'],
+                'division': role_data['division'],
+                'tier': role_data['tier'],
+                'rank_icon': role_data['rank_icon']
+            })
+        
+        # Sort players by division and tier
+        ranked_players.sort(key=lambda x: (
+            self.rank_values.get(x['division'].lower(), 0) * 5 + (5 - x['tier'])
+        ), reverse=True)
+        
+        return ranked_players[:10]  # Return top 10
+
+    @tasks.loop(minutes=30)
+    async def update_leaderboard(self):
+        try:
+            channel = self.bot.get_channel(self.leaderboard_channel)
+            if not channel:
+                print("Could not find leaderboard channel")
+                return
+
+            # Clear existing messages
+            async for message in channel.history(limit=10):
+                await message.delete()
+
+            roles = ['tank', 'damage', 'support']
+            role_emojis = {
+                'tank': '🛡️',
+                'damage': '⚔️',
+                'support': '💉'
+            }
+
+            for role in roles:
+                ranked_players = await self.create_role_leaderboard(role)
+                
+                if not ranked_players:
+                    continue
+
+                # Create leaderboard message
+                message_lines = [
+                    f"**{role_emojis[role]} Top {role.capitalize()} Players {role_emojis[role]}**",
+                    "```md",  # Start of markdown-style code block
+                ]
+
+                for idx, player in enumerate(ranked_players, 1):
+                    member = await self.bot.fetch_user(player['discord_id'])
+                    discord_name = member.name if member else "Unknown"
+                    
+                    # Format each player entry
+                    rank_display = f"{idx:2d}."  # Right-aligned number with dot
+                    division_display = f"{player['division'].capitalize()} {player['tier']}"
+                    player_line = f"{rank_display} {discord_name:<20} - {division_display:<15} ({player['blizzard_username']})"
+                    message_lines.append(player_line)
+
+                message_lines.append("```")  # End of code block
+                message_lines.append(f"Last updated: <t:{int(datetime.now(timezone.utc).timestamp())}:R>")
+                
+                # Send the formatted message
+                await channel.send('\n'.join(message_lines))
+
+        except Exception as e:
+            print(f"Error updating leaderboard: {str(e)}")
+
+
+    @commands.slash_command(name="updateleaderboard", description="Manually update the leaderboard")
+    async def update_leaderboard_command(self, ctx: discord.ApplicationContext):
+        try:
+            await self.update_leaderboard()
+            await ctx.respond("Leaderboard updated!", ephemeral=True)
+        except Exception as e:
+            print(f"Error updating leaderboard: {str(e)}")
+            await ctx.respond("An error occurred while updating the leaderboard!", ephemeral=True)
+
+    @commands.slash_command(name="registerplayer", description="Register a player to track their stats")
         async def register_player(ctx: discord.ApplicationContext, username: str):
             username = username.strip()
             # validate for valid blizzard username
@@ -212,6 +330,78 @@ class Leaderboard(commands.Cog):
                 await ctx.respond("An error occurred while registering. Please try again later.", ephemeral=True)
                 return
 
+
+    @tasks.loop(hours=1)
+    async def update_leaderboard_message(self):
+        channel = self.bot.get_channel(self.leaderboard_channel)
+        if channel is None:
+            print("Leaderboard channel not found.")
+            raise RuntimeError("Leaderboard channel not found")
+
+        players = self.player_stats_collection.find()
+        player_stats = []
+        rank_order = {
+            "champion": 0, "grandmaster": 1, "master": 2, "diamond": 3,
+            "platinum": 4, "gold": 5, "silver": 6, "bronze": 7, "unranked": 8
+        }
+
+        for player in players:
+            # Get latest stats
+            stats_list = player.get('stats', [])
+            if not stats_list:
+                continue
+            latest_stats = stats_list[-1]
+            comp = latest_stats.get('competitive', {}).get('pc', {})
+            # Determine top role and rank
+            roles = ['tank', 'damage', 'support']
+            top_role = None
+            top_rank = None
+            for role in roles:
+                role_data = comp.get(role)
+                if role_data and role_data.get('division'):
+                    if not top_role or rank_order[role_data['division'].lower()] < rank_order.get(top_rank, 8):
+                        top_role = role
+                        top_rank = role_data['division'].lower()
+            # Prepare rank breakdown
+            player_stats.append({
+                'blizzard_username': player['blizzard_username'],
+                'top_role': top_role if top_role else 'unranked',
+                'top_rank': top_rank if top_rank else 'unranked',
+                'tank_rank': comp.get('tank', {}).get('division', 'N/A') if comp.get('tank') else 'N/A',
+                'damage_rank': comp.get('damage', {}).get('division', 'N/A') if comp.get('damage') else 'N/A',
+                'support_rank': comp.get('support', {}).get('division', 'N/A') if comp.get('support') else 'N/A',
+                'open_rank': comp.get('open', {}).get('division', 'N/A') if comp.get('open') else 'N/A'
+            })
+
+        # Sort by highest rank (lowest value in rank_order)
+        player_stats.sort(key=lambda x: rank_order.get(x['top_rank'], 8))
+
+        leaderboard_message = "**Overwatch 2 Leaderboard**\n\n"
+        leaderboard_message += "Discord Username | Top Role | Top Rank\n"
+        for player in player_stats:
+            leaderboard_message += f"{player['blizzard_username']} | {player['top_role'].capitalize()} | {player['top_rank'].capitalize()}\n"
+
+        leaderboard_message += "\n**Rank Breakdown**\n"
+        leaderboard_message += "Discord Username | Tank | Damage | Support | Open\n"
+        for player in player_stats:
+            leaderboard_message += (
+                f"{player['blizzard_username']} | "
+                f"{player['tank_rank']} | {player['damage_rank']} | "
+                f"{player['support_rank']} | {player['open_rank']}\n"
+            )
+
+        # Try to update previous leaderboard message
+        async for message in channel.history(limit=100):
+            if message.author == self.bot.user:
+                try:
+                    await message.edit(content=leaderboard_message)
+                    print("Leaderboard message updated.")
+                    return
+                except Exception as e:
+                    print(f"Error updating leaderboard message: {str(e)}")
+                    raise RuntimeError("Failed to update leaderboard message")
+        # If not found, send a new message
+        await channel.send(content=leaderboard_message)
 
 def setup(bot: discord.Bot):
     print("Loading Leaderboard Cog")
