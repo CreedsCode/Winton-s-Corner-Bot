@@ -239,10 +239,10 @@ class Leaderboard(commands.Cog):
         
         return ranked_players[:10]  # Return top 10
 
-    @tasks.loop(minutes=30)
+    @tasks.loop(minutes=1)
     async def update_leaderboard(self):
         try:
-            channel = self.bot.get_channel(self.leaderboard_channel)
+            channel = await self.bot.get_channel(self.leaderboard_channel)
             if not channel:
                 print("Could not find leaderboard channel")
                 return
