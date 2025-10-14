@@ -207,7 +207,7 @@ class Leaderboard(commands.Cog):
         base_value = self.rank_values.get(division, 0)
         return base_value * 5 + (5 - tier)
 
-    async def create_role_leaderboard(self, role: str):
+    def create_role_leaderboard(self, role: str):
         all_players = list(self.player_stats_collection.find())
         ranked_players = []
         
@@ -237,7 +237,7 @@ class Leaderboard(commands.Cog):
             self.rank_values.get(x['division'].lower(), 0) * 5 + (5 - x['tier'])
         ), reverse=True)
         
-        return ranked_players[:10]  # Return top 10
+        return ranked_players
 
     @tasks.loop(minutes=1)
     async def update_leaderboard(self):
@@ -246,6 +246,7 @@ class Leaderboard(commands.Cog):
             if not channel:
                 print("Could not find leaderboard channel")
                 return
+
 
             # # get latest messages to edit
             # async for message in channel.history(limit=10):
@@ -259,7 +260,7 @@ class Leaderboard(commands.Cog):
             }
 
             for role in roles:
-                ranked_players = await self.create_role_leaderboard(role)
+                ranked_players = self.create_role_leaderboard(role)
                 
                 if not ranked_players:
                     continue
