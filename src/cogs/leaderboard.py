@@ -247,9 +247,9 @@ class Leaderboard(commands.Cog):
                 print("Could not find leaderboard channel")
                 return
 
-            # Clear existing messages
-            async for message in channel.history(limit=10):
-                await message.delete()
+            # # get latest messages to edit
+            # async for message in channel.history(limit=10):
+            #     await message.delete()
 
             roles = ['tank', 'damage', 'support']
             role_emojis = {
