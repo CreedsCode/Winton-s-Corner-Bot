@@ -16,7 +16,7 @@ services:
     image: mongo:6.0
     container_name: winton-corner-bot-mongo
     ports:
-      - "27017:27028"
+      - "27028:27017"
     volumes:
       - mongo_data:/data/db
 
