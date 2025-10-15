@@ -19,6 +19,10 @@ for cock in COCKS:
 @bot.event
 async def on_ready():
     print(f"{bot.user} is ready and online!")
+    # start leaderboard updates
+    leaderboard_cog = bot.get_cog("Leaderboard")
+    if leaderboard_cog:
+        await leaderboard_cog.update_leaderboard()
 
 
 CHANNEL_CREATE_CHANNEL_NAME = '[CREATE CHANNEL]'

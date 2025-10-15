@@ -24,7 +24,7 @@ class PlayerStat:
 
 class Leaderboard(commands.Cog):
     def __init__(self, bot: discord.Bot):
-        self.bot = bot
+        self.bot: discord.Bot = bot
 
         self.leaderboard_channel = 1426238135876190321
         self.rank_values = {
@@ -193,18 +193,14 @@ class Leaderboard(commands.Cog):
                 print(f"Error showing stats: {str(e)}")
                 await ctx.respond("An error occurred while fetching your stats!", ephemeral=True)
 
-    def get_player_rank_value(self, player_stats):
-        if not player_stats.get('competitive') or not player_stats['competitive'].get('pc'):
-            return -1
-        
-        comp_data = player_stats['competitive']['pc']
-        if not comp_data:
-            return -1
-        
-        division = comp_data.get('division', '').lower()
-        tier = comp_data.get('tier', 5)  # Default to lowest tier
-        
+    def get_role_rank_value(self, role_data):
+        if not role_data:
+            return 0
+        division = role_data.get('division', '').lower()
+        tier = role_data.get('tier', 5)
         base_value = self.rank_values.get(division, 0)
+        if base_value == 0:
+            return 0
         return base_value * 5 + (5 - tier)
 
     def create_role_leaderboard(self, role: str):
@@ -242,51 +238,91 @@ class Leaderboard(commands.Cog):
     @tasks.loop(minutes=1)
     async def update_leaderboard(self):
         try:
-            channel = await self.bot.get_channel(self.leaderboard_channel)
+            if self.bot.guilds is None or len(self.bot.guilds) == 0:
+                print("Bot is not in any guilds yet.")
+                return
+            
+            channel = self.bot.get_channel(self.leaderboard_channel)
             if not channel:
                 print("Could not find leaderboard channel")
                 return
 
+            # Delete previous leaderboard messages
+            async for message in channel.history(limit=50):
+                if message.author == self.bot.user and "LEADERBOARD" in message.content:
+                    await message.delete()
 
-            # # get latest messages to edit
-            # async for message in channel.history(limit=10):
-            #     await message.delete()
-
-            roles = ['tank', 'damage', 'support']
-            role_emojis = {
-                'tank': '🛡️',
-                'damage': '⚔️',
-                'support': '💉'
-            }
-
-            for role in roles:
-                ranked_players = self.create_role_leaderboard(role)
+            all_players = list(self.player_stats_collection.find())
+            ranked_players = []
+            
+            for player in all_players:
+                if not player.get('stats'):
+                    continue
+                latest_stats = player['stats'][-1]
+                comp_data = latest_stats.get('competitive', {}).get('pc', {})
                 
-                if not ranked_players:
+                tank_data = comp_data.get('tank')
+                damage_data = comp_data.get('damage')
+                support_data = comp_data.get('support')
+
+                tank_rank_str = f"{tank_data['division'].capitalize()}-{tank_data['tier']}" if tank_data else '-'
+                damage_rank_str = f"{damage_data['division'].capitalize()}-{damage_data['tier']}" if damage_data else '-'
+                support_rank_str = f"{support_data['division'].capitalize()}-{support_data['tier']}" if support_data else '-'
+
+                roles_data = []
+                if tank_data:
+                    roles_data.append(('tank', self.get_role_rank_value(tank_data)))
+                if damage_data:
+                    roles_data.append(('damage', self.get_role_rank_value(damage_data)))
+                if support_data:
+                    roles_data.append(('support', self.get_role_rank_value(support_data)))
+                
+                if not roles_data:
                     continue
 
-                # Create leaderboard message
-                message_lines = [
-                    f"**{role_emojis[role]} Top {role.capitalize()} Players {role_emojis[role]}**",
-                    "```md",  # Start of markdown-style code block
-                ]
-
-                for idx, player in enumerate(ranked_players, 1):
-                    member = await self.bot.fetch_user(player['discord_id'])
-                    discord_name = member.name if member else "Unknown"
-                    
-                    # Format each player entry
-                    rank_display = f"{idx:2d}."  # Right-aligned number with dot
-                    division_display = f"{player['division'].capitalize()} {player['tier']}"
-                    player_line = f"{rank_display} {discord_name:<20} - {division_display:<15} ({player['blizzard_username']})"
-                    message_lines.append(player_line)
-
-                message_lines.append("```")  # End of code block
-                message_lines.append(f"Last updated: <t:{int(datetime.now(timezone.utc).timestamp())}:R>")
+                top_role_data = max(roles_data, key=lambda x: x[1])
+                top_role_name = top_role_data[0]
+                highest_rank_value = top_role_data[1]
+                top_emoji = {'tank': '🛡', 'damage': '🔫', 'support': '💉'}[top_role_name]
                 
-                # Send the formatted message
-                await channel.send('\n'.join(message_lines))
-
+                ranked_players.append({
+                    'discord_id': player['discord_id'],
+                    'blizzard_username': player['blizzard_username'],
+                    'tank_rank': tank_rank_str,
+                    'damage_rank': damage_rank_str,
+                    'support_rank': support_rank_str,
+                    'highest_rank_value': highest_rank_value,
+                    'top_emoji': top_emoji
+                })
+            
+            # Sort by highest_rank_value descending
+            ranked_players.sort(key=lambda x: x['highest_rank_value'], reverse=True)
+            
+            message_lines = ["**LEADERBOARD**"]
+            
+            for idx, player in enumerate(ranked_players, 1):
+                member = await self.bot.fetch_user(player['discord_id'])
+                discord_name = member.name if member else "Unknown"
+                
+                line = (f"{idx}. {player['top_emoji']} {discord_name} ({player['blizzard_username']})    "
+                        f"🛡 {player['tank_rank']}   🔫 {player['damage_rank']}    💉 {player['support_rank']}")
+                message_lines.append(line)
+            
+            # Split into messages if too long
+            current_message = ""
+            for line in message_lines:
+                if len(current_message) + len(line) + 1 > 2000:
+                    await channel.send(current_message)
+                    current_message = line
+                else:
+                    if current_message:
+                        current_message += "\n" + line
+                    else:
+                        current_message = line
+            
+            if current_message:
+                await channel.send(current_message)
+        
         except Exception as e:
             print(f"Error updating leaderboard: {str(e)}")
 
