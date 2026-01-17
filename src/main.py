@@ -128,9 +128,14 @@ async def on_voice_state_update(member: discord.Member, before: discord.VoiceSta
         await member.move_to(new_channel)
 
 
-@bot.slash_command(name="hello", description="Say hello to the bot")
-async def hello(ctx: discord.ApplicationContext):
-    await ctx.respond("Hey!", ephemeral=True)
+@bot.slash_command(name="vcusers", description="Get a list of names of users in your current voice channel")
+async def vc_users(ctx: discord.ApplicationContext):
+    if ctx.author.voice is None:
+        await ctx.respond("You are not in a voice channel.", ephemeral=True)
+        return
+
+    names = "\n".join([f"{member.display_name} <{member.name}>" for member in ctx.author.voice.channel.members])
+    await ctx.respond(f"Users in your voice channel:\n\n{names}", ephemeral=True)
 
 
 @bot.slash_command(name="invite_stats", description="View invite conversion statistics")
