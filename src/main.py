@@ -116,7 +116,6 @@ async def on_voice_state_update(member: discord.Member, before: discord.VoiceSta
     if after.channel is not None and after.channel.name == CHANNEL_CREATE_CHANNEL_NAME:
         new_channel = await member.guild.create_voice_channel(
             name=member.display_name + "'s Channel",
-            user_limit=7,
             category=after.channel.category,
             overwrites={
                 member: discord.PermissionOverwrite(
