@@ -1,5 +1,7 @@
-import discord
+import random
 import os
+
+import discord
 from dotenv import load_dotenv
 import mongo
 import posthog_tracker
@@ -133,8 +135,9 @@ async def vc_users(ctx: discord.ApplicationContext):
         await ctx.respond("You are not in a voice channel.", ephemeral=True)
         return
 
-    names = "\n".join([f"{member.display_name} <{member.name}>" for member in ctx.author.voice.channel.members])
-    await ctx.respond(f"Users in your voice channel:\n\n{names}", ephemeral=True)
+    names = [f"{member.display_name} <{member.name}>" for member in ctx.author.voice.channel.members]
+    random.shuffle(names)
+    await ctx.respond(f"Users in your voice channel:\n\n{"\n".join(names)}", ephemeral=True)
 
 
 @bot.slash_command(name="invite_stats", description="View invite conversion statistics")
