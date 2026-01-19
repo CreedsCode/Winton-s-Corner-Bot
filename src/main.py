@@ -137,7 +137,7 @@ async def vc_users(ctx: discord.ApplicationContext):
 
     names = [f"{member.display_name} <{member.name}>" for member in ctx.author.voice.channel.members]
     random.shuffle(names)
-    await ctx.respond(f"Users in your voice channel:\n\n{'\n'.join(names)}", ephemeral=True)
+    await ctx.respond("Users in your voice channel:\n\n" + "\n".join(names), ephemeral=True)
 
 
 @bot.slash_command(name="invite_stats", description="View invite conversion statistics")
