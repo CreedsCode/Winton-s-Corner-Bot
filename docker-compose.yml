@@ -1,24 +1,9 @@
+version: "3.9"
 services:
-  app:
-    build: .
-    container_name: winton-corner-bot-dev
-    working_dir: /app
+  nginx:
+    build:
+      context: ./apps/web-presence
     ports:
-      - "8000:8000"
-    environment:
-      - PYTHONUNBUFFERED=1
-      - TOKEN=${TOKEN}
-      - MONGO_URI=mongodb://mongo:27017/wintonbot
-    depends_on:
-      - mongo
-
-  mongo:
-    image: mongo:6.0
-    container_name: winton-corner-bot-mongo
-    ports:
-      - "27028:27017"
-    volumes:
-      - mongo_data:/data/db
-
-volumes:
-  mongo_data:
+      - "80:80"
+    restart: unless-stopped
+  # TODO discord-bot:

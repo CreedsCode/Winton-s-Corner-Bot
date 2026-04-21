@@ -1,5 +1,1 @@
-.env
-venv/
-src/__pycache__/mongo.cpython-312.pyc
-src/cogs/__pycache__/leaderboard.cpython-312.pyc
-src/__pycache__/overwatch_api.cpython-312.pyc
+.DS_Store
