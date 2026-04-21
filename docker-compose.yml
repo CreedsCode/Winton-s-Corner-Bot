@@ -3,7 +3,7 @@ services:
   nginx:
     build:
       context: ./apps/web-presence
-    ports:
-      - "80:80"
+    expose:
+      - "80"
     restart: unless-stopped
   # TODO discord-bot:
