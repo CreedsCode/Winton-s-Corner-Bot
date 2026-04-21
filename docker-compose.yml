@@ -6,4 +6,10 @@ services:
     expose:
       - "80"
     restart: unless-stopped
+  pgfant:
+    build:
+      context: ./apps/pgfant
+    expose:
+      - "80"
+    restart: unless-stopped
   # TODO discord-bot:
