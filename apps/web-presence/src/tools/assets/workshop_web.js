@@ -87,7 +87,7 @@ function escAttr(str) {
     return String(str).replace(/'/g, "\\'");
 }
 
-fetch("http://localhost:8000/codes")
+fetch("https://75aea6a8be1f4c7c87bc0c28f117baf6.pages.dev/codes")
     .then((r) => r.json())
     .then((codes) => {
         workshopCodes.push(...codes);
