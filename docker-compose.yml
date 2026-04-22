@@ -1,15 +1,30 @@
-version: "3.9"
 services:
   nginx:
-    build:
-      context: ./apps/web-presence
+    build: ./apps/web-presence
     expose:
       - "80"
     restart: unless-stopped
   pgfant:
-    build:
-      context: ./apps/pgfant
+    build: ./apps/pgfant
     expose:
       - "80"
     restart: unless-stopped
-  # TODO discord-bot:
+
+  discord-bot:
+    build: ./apps/discord-bot
+    depends_on:
+      - mongo
+    environment:
+      - PYTHONUNBUFFERED=1
+      - TOKEN=${TOKEN}
+      - MONGO_URI=mongodb://mongo:27017/wintonbot
+    restart: unless-stopped
+    working_dir: /app
+  mongo:
+    image: mongo:6.0
+    restart: unless-stopped
+    volumes:
+      - mongo_data:/data/db
+
+volumes:
+  mongo_data:
