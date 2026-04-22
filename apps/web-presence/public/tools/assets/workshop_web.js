@@ -1,14 +1,52 @@
 const workshopCodes = [];
+let activeTags = new Set();
+let searchQuery = '';
+
+function renderFilterBar() {
+    const allTags = [...new Set(workshopCodes.flatMap(e => e.tags || []))].sort();
+    const bar = document.getElementById('tag-filter');
+    if (allTags.length === 0) {
+        bar.innerHTML = '';
+        return;
+    }
+    bar.innerHTML = allTags.map(tag => `
+        <button class="tag-btn${activeTags.has(tag) ? ' active' : ''}"
+                onclick="toggleTag('${escAttr(tag)}')">${escHtml(tag)}</button>
+    `).join('');
+}
+
+function toggleTag(tag) {
+    activeTags.has(tag) ? activeTags.delete(tag) : activeTags.add(tag);
+    renderFilterBar();
+    renderCards();
+}
 
 function renderCards() {
+    const q = searchQuery.toLowerCase();
+    const filtered = workshopCodes.filter(e => {
+        const matchesTag = activeTags.size === 0 || (e.tags || []).some(t => activeTags.has(t));
+        const matchesSearch = !q ||
+            e.code.toLowerCase().includes(q) ||
+            (e.description || '').toLowerCase().includes(q) ||
+            (e.tags || []).some(t => t.toLowerCase().includes(q));
+
+        return matchesTag && matchesSearch;
+    });
+
     const grid = document.getElementById('codes-grid');
-    grid.innerHTML = workshopCodes.map(entry => `
-                <div class="card">
-                    <div class="card-code">${escHtml(entry.code)}</div>
-                    <div class="card-description">${escHtml(entry.description)}</div>
-                    <button class="copy-btn" onclick="copyCode(this, '${escAttr(entry.code)}')">Copy Code</button>
-                </div>
-            `).join('');
+    grid.innerHTML = filtered.length > 0 ? filtered.map(entry => {
+        const tagChips = (entry.tags || []).map(t =>
+            `<span class="tag-chip">${escHtml(t)}</span>`
+        ).join('');
+        return `
+            <div class="card">
+                <div class="card-code">${escHtml(entry.code)}</div>
+                <div class="card-description">${escHtml(entry.description)}</div>
+                ${tagChips ? `<div class="card-tags">${tagChips}</div>` : ''}
+                <button class="copy-btn" onclick="copyCode(this, '${escAttr(entry.code)}')">Copy Code</button>
+            </div>
+        `;
+    }).join('') : '<p class="no-results">No codes match your search.</p>';
 }
 
 function copyCode(btn, code) {
@@ -53,5 +91,11 @@ fetch("http://localhost:8000/codes")
     .then((r) => r.json())
     .then((codes) => {
         workshopCodes.push(...codes);
+        renderFilterBar();
         renderCards();
     });
+
+document.getElementById('search-input').addEventListener('input', function () {
+    searchQuery = this.value.trim();
+    renderCards();
+});
