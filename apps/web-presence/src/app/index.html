@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Winton's Corner</title>
+  <link rel="stylesheet" href="/app/app.css">
+  <style>
+    .hero {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      text-align: center;
+      padding: 2rem;
+    }
+    .hero h1 {
+      color: var(--accent);
+      font-size: 3rem;
+      margin: 0 0 .5rem;
+      letter-spacing: -.02em;
+    }
+    .hero p {
+      color: var(--muted);
+      font-size: 1.1rem;
+      margin: 0 0 2.5rem;
+      max-width: 420px;
+    }
+    .login-btn {
+      font-size: 1.05rem;
+      padding: .75rem 2rem;
+    }
+    .discord-icon {
+      display: inline-block;
+      margin-right: .4rem;
+      vertical-align: -.1em;
+    }
+  </style>
+</head>
+<body>
+  <div class="hero">
+    <h1>Winton's Corner</h1>
+    <p>Overwatch Workshop codes for the Monke community</p>
+    <a href="/auth/discord" class="btn login-btn" id="login-btn" style="display:none">
+      Login with Discord
+    </a>
+    <p id="loading" class="muted" style="font-size:.9rem">Loading&hellip;</p>
+  </div>
+
+  <script src="/app/app.js"></script>
+  <script>
+    // Capture token if Discord just redirected back with #token=...
+    captureTokenFromFragment();
+
+    if (getToken()) {
+      window.location.replace('/app/feed.html');
+    } else {
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('login-btn').style.display = 'inline-block';
+    }
+  </script>
+</body>
+</html>

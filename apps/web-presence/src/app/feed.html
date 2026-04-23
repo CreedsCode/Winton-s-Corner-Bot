@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Monke Workshop — Winton's Corner</title>
+  <link rel="stylesheet" href="/app/app.css">
+  <style>
+    .feed-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+    .code-title { font-size: 1.05rem; font-weight: 700; margin-bottom: .3rem; }
+    .code-desc { color: var(--muted); font-size: .9rem; margin-bottom: .85rem; }
+    .loading { text-align: center; padding: 3rem; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="/app/feed.html" class="brand">Monke Workshop</a>
+    <div class="nav-actions" id="nav-actions">
+      <!-- populated by JS -->
+    </div>
+  </nav>
+
+  <div class="page-wrap">
+    <div class="feed-header">
+      <h1 class="page-title" style="margin:0">Workshop Codes</h1>
+    </div>
+    <div id="feed-content">
+      <div class="loading">Loading codes&hellip;</div>
+    </div>
+  </div>
+
+  <script src="/app/app.js"></script>
+  <script>
+    const MONKE_CONTEXT_ID = '00000000-0000-0000-0001-000000000000';
+
+    // Codes stored globally so copyCode() can reference them by index without
+    // embedding raw code strings in onclick attributes.
+    let codes = [];
+
+    async function init() {
+      const token = getToken();
+      const navActions = document.getElementById('nav-actions');
+
+      if (token) {
+        navActions.innerHTML = `
+          <a href="/app/profile.html" class="btn btn-ghost">Profile</a>
+          <a href="/app/submit.html" class="btn">+ Submit Code</a>
+          <button class="btn btn-ghost" onclick="logout()">Logout</button>
+        `;
+      } else {
+        navActions.innerHTML = `
+          <a href="/auth/discord" class="btn">Login with Discord</a>
+        `;
+      }
+
+      await loadCodes(token);
+    }
+
+    async function loadCodes(token) {
+      const url = `/api/workshop_codes`
+        + `?origin_context_id=eq.${MONKE_CONTEXT_ID}`
+        + `&order=created_at.desc`
+        + `&limit=50`
+        + `&select=*,author:identities!author_identity_id(handle,avatar_url),context:contexts!origin_context_id(name,slug)`;
+
+      const headers = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      try {
+        const resp = await fetch(url, { headers });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        codes = await resp.json();
+        renderCodes();
+      } catch (err) {
+        document.getElementById('feed-content').innerHTML =
+          `<div class="empty-state">Failed to load codes. Please refresh.</div>`;
+      }
+    }
+
+    function renderCodes() {
+      const el = document.getElementById('feed-content');
+
+      if (!codes.length) {
+        el.innerHTML = '<div class="empty-state">No workshop codes yet.</div>';
+        return;
+      }
+
+      el.innerHTML = codes.map((c, i) => {
+        const avatar = c.author?.avatar_url
+          ? `<img class="avatar" src="${esc(c.author.avatar_url)}" alt="">`
+          : '';
+        const desc = c.description
+          ? `<div class="code-desc">${esc(c.description)}</div>`
+          : '';
+
+        return `
+          <div class="card">
+            <div class="code-title">${esc(c.title)}</div>
+            ${desc}
+            <div class="code-block">
+              <button class="btn btn-sm copy-btn" onclick="copyCode(this, ${i})">Copy</button>
+              <pre>${esc(c.code)}</pre>
+            </div>
+            <div class="author-row">
+              ${avatar}
+              <span>@${esc(c.author?.handle ?? 'platform')}</span>
+              <span class="badge">${esc(c.context?.name ?? 'Monke')}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function copyCode(btn, idx) {
+      const code = codes[idx]?.code ?? '';
+      navigator.clipboard.writeText(code).then(() => {
+        const original = btn.textContent;
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = original; }, 2000);
+      }).catch(() => {
+        // Fallback for browsers without clipboard API
+        const ta = document.createElement('textarea');
+        ta.value = code;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
+      });
+    }
+
+    init();
+  </script>
+</body>
+</html>

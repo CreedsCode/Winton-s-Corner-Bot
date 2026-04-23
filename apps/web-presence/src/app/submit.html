@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Submit Code — Winton's Corner</title>
+  <link rel="stylesheet" href="/app/app.css">
+  <style>
+    .submit-wrap {
+      max-width: 720px;
+      margin: 2rem auto;
+      padding: 0 1.25rem;
+    }
+    .submit-btn {
+      width: 100%;
+      padding: .75rem;
+      font-size: 1rem;
+      margin-top: .5rem;
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="/app/feed.html" class="brand">Monke Workshop</a>
+    <div class="nav-actions">
+      <a href="/app/feed.html" class="btn btn-ghost">Back to Feed</a>
+      <button class="btn btn-ghost" onclick="logout()">Logout</button>
+    </div>
+  </nav>
+
+  <div class="submit-wrap">
+    <h1 class="page-title">Submit Workshop Code</h1>
+
+    <div class="card">
+      <div class="error-msg" id="error-msg"></div>
+
+      <form id="submit-form">
+        <div class="form-group">
+          <label for="title">Title <span class="accent">*</span></label>
+          <input type="text" id="title" maxlength="120" required
+                 placeholder="e.g. Skip team assembly phase">
+        </div>
+
+        <div class="form-group">
+          <label for="description">Description</label>
+          <textarea id="description" rows="3"
+                    placeholder="What does this code do? (optional)"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="code">Workshop Script <span class="accent">*</span></label>
+          <textarea id="code" class="code-input" rows="14" required
+                    placeholder="Paste your Workshop script here&hellip;"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="tags">Tags <span class="muted">(comma-separated, optional)</span></label>
+          <input type="text" id="tags"
+                 placeholder="e.g. practice, utility, fun">
+        </div>
+
+        <button type="submit" class="btn submit-btn">Submit Code</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="/app/app.js"></script>
+  <script>
+    const MONKE_CONTEXT_ID = '00000000-0000-0000-0001-000000000000';
+
+    // Require authentication
+    const token = getToken();
+    if (!token) { window.location.replace('/app/'); }
+
+    const claims = parseJwt(token);
+    if (!claims) { clearToken(); window.location.replace('/app/'); }
+
+    const errorEl = document.getElementById('error-msg');
+
+    function showError(msg) {
+      errorEl.textContent = msg;
+      errorEl.style.display = 'block';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    document.getElementById('submit-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorEl.style.display = 'none';
+
+      const title = document.getElementById('title').value.trim();
+      const description = document.getElementById('description').value.trim();
+      const code = document.getElementById('code').value.trim();
+      const tagsRaw = document.getElementById('tags').value.trim();
+      const tags = tagsRaw
+        ? tagsRaw.split(',').map(t => t.trim().toLowerCase()).filter(Boolean)
+        : [];
+
+      if (!title) { showError('Title is required.'); return; }
+      if (!code)  { showError('Workshop script is required.'); return; }
+      if (tags.length > 10) { showError('Maximum 10 tags allowed.'); return; }
+
+      const body = {
+        author_identity_id: claims.active_identity,
+        origin_context_id:  MONKE_CONTEXT_ID,
+        title,
+        code,
+        tags,
+      };
+      if (description) body.description = description;
+
+      const submitBtn = e.target.querySelector('[type="submit"]');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Submitting…';
+
+      try {
+        const resp = await apiFetch('/workshop_codes', {
+          method: 'POST',
+          body: JSON.stringify(body),
+          headers: { 'Prefer': 'return=representation' },
+        });
+
+        if (resp.status === 201) {
+          window.location.href = '/app/feed.html';
+        } else if (resp.status === 401) {
+          showError('Your session has expired. Please log in again.');
+          setTimeout(() => window.location.replace('/app/'), 2000);
+        } else if (resp.status === 403) {
+          showError('You must be a Monke member to submit workshop codes.');
+        } else {
+          const data = await resp.json().catch(() => ({}));
+          showError(data.message || `Submission failed (HTTP ${resp.status}).`);
+        }
+      } catch (err) {
+        showError('Network error. Please check your connection and try again.');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit Code';
+      }
+    });
+  </script>
+</body>
+</html>

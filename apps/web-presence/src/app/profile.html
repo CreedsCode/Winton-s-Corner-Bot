@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profile — Winton's Corner</title>
+  <link rel="stylesheet" href="/app/app.css">
+  <style>
+    .profile-card { max-width: 680px; }
+    .field-row {
+      display: grid;
+      grid-template-columns: 130px 1fr;
+      gap: 1rem;
+      align-items: start;
+      margin-bottom: 1.25rem;
+    }
+    .field-label {
+      color: var(--muted);
+      font-size: .85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      padding-top: .65rem;
+    }
+    .field-controls { display: flex; flex-direction: column; gap: .4rem; }
+    .field-actions { display: flex; align-items: center; gap: .6rem; }
+    .save-status { font-size: .8rem; color: var(--green); display: none; }
+    .handle-row {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1.25rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .handle-avatar { width: 48px; height: 48px; border-radius: 50%; }
+    .handle-name { font-size: 1.15rem; font-weight: 700; }
+    .handle-sub { color: var(--muted); font-size: .85rem; }
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="/app/feed.html" class="brand">Monke Workshop</a>
+    <div class="nav-actions">
+      <a href="/app/submit.html" class="btn">+ Submit Code</a>
+      <button class="btn btn-ghost" onclick="logout()">Logout</button>
+    </div>
+  </nav>
+
+  <div class="page-wrap">
+    <h1 class="page-title">My Profile</h1>
+    <div class="card profile-card" id="profile-card">
+      <div class="muted">Loading&hellip;</div>
+    </div>
+  </div>
+
+  <script src="/app/app.js"></script>
+  <script>
+    const MONKE_CONTEXT_ID = '00000000-0000-0000-0001-000000000000';
+
+    // Require authentication
+    const token = getToken();
+    if (!token) { window.location.replace('/app/'); }
+
+    const claims = parseJwt(token);
+    if (!claims) { clearToken(); window.location.replace('/app/'); }
+
+    // Standard FIP-3 fields to render
+    const FIELDS = [
+      { key: 'display_name', label: 'Display Name', type: 'input',
+        placeholder: 'Your preferred name' },
+      { key: 'pronouns',     label: 'Pronouns',     type: 'input',
+        placeholder: 'e.g. they/them' },
+      { key: 'bio',          label: 'Bio',           type: 'textarea',
+        placeholder: 'Tell the Monke community about yourself…', rows: 4 },
+    ];
+
+    // Map of key → existing field row from DB (keyed for fast lookup).
+    let existingFields = {};
+    let identity = null;
+
+    async function init() {
+      // Fetch own identity and profile fields in parallel
+      const [identityResp, fieldsResp] = await Promise.all([
+        apiFetch(`/identities?id=eq.${claims.active_identity}&select=handle,avatar_url`).catch(() => null),
+        apiFetch(`/profile_fields?author_identity_id=eq.${claims.active_identity}&select=*`).catch(() => null),
+      ]);
+
+      if (identityResp?.ok) {
+        const rows = await identityResp.json();
+        identity = rows[0] ?? null;
+      }
+
+      if (fieldsResp?.ok) {
+        const rows = await fieldsResp.json();
+        existingFields = Object.fromEntries(rows.map(r => [r.key, r]));
+      }
+
+      renderCard();
+    }
+
+    function renderCard() {
+      const card = document.getElementById('profile-card');
+
+      // Identity header
+      const avatarHtml = identity?.avatar_url
+        ? `<img class="handle-avatar" src="${esc(identity.avatar_url)}" alt="">`
+        : '';
+      const handleHtml = `
+        <div class="handle-row">
+          ${avatarHtml}
+          <div>
+            <div class="handle-name">@${esc(identity?.handle ?? claims.active_identity)}</div>
+            <div class="handle-sub muted">Your Monke identity</div>
+          </div>
+        </div>
+      `;
+
+      const fieldsHtml = FIELDS.map(f => {
+        const existing = existingFields[f.key];
+        // jsonb string values come back as plain strings from PostgREST
+        const val = existing ? String(existing.value ?? '') : '';
+
+        const inputHtml = f.type === 'textarea'
+          ? `<textarea id="field-${f.key}" rows="${f.rows ?? 3}"
+                       placeholder="${f.placeholder}">${esc(val)}</textarea>`
+          : `<input type="text" id="field-${f.key}"
+                    value="${esc(val)}" placeholder="${f.placeholder}">`;
+
+        return `
+          <div class="field-row">
+            <div class="field-label">${f.label}</div>
+            <div class="field-controls">
+              ${inputHtml}
+              <div class="field-actions">
+                <button class="btn btn-ghost btn-sm"
+                        onclick="saveField('${f.key}')">Save</button>
+                <span class="save-status" id="status-${f.key}">Saved!</span>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      card.innerHTML = handleHtml + fieldsHtml;
+    }
+
+    async function saveField(key) {
+      const inputEl = document.getElementById(`field-${key}`);
+      const value = inputEl.value;  // preserve whitespace the user typed
+      const existing = existingFields[key];
+      const statusEl = document.getElementById(`status-${key}`);
+
+      let resp;
+      if (existing) {
+        resp = await apiFetch(`/profile_fields?id=eq.${existing.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ value }),
+          headers: { 'Prefer': 'return=representation' },
+        });
+      } else {
+        resp = await apiFetch('/profile_fields', {
+          method: 'POST',
+          body: JSON.stringify({
+            author_identity_id: claims.active_identity,
+            origin_context_id:  MONKE_CONTEXT_ID,
+            key,
+            value,
+            visibility: 'public',
+          }),
+          headers: { 'Prefer': 'return=representation' },
+        });
+      }
+
+      if (resp && resp.ok) {
+        const data = await resp.json();
+        const updated = Array.isArray(data) ? data[0] : data;
+        if (updated) existingFields[key] = updated;
+
+        statusEl.style.display = 'inline';
+        setTimeout(() => { statusEl.style.display = 'none'; }, 2500);
+      } else if (resp && resp.status === 401) {
+        window.location.replace('/app/');
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+# Local development overrides — merged automatically by docker compose.
+# Exposes service ports to the host for browser access and direct DB/API inspection.
+# Do NOT commit real secrets here. Use .env for credentials.
+
+services:
+  nginx:
+    ports:
+      - "127.0.0.1:80:80"       # main entry: http://localhost
+
+  auth-shim:
+    ports:
+      - "127.0.0.1:8000:80"     # direct: http://localhost:8000/auth/discord
+
+  postgrest:
+    ports:
+      - "127.0.0.1:3000:3000"   # direct API: http://localhost:3000/profiles
+
+  postgres:
+    ports:
+      - "127.0.0.1:5432:5432"   # direct DB: connect with psql/TablePlus/etc.
