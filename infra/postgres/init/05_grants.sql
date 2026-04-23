@@ -19,3 +19,6 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON api.workshop_codes  TO authenticated;
 
 -- anon can read workshop_codes (RLS limits to public/unlisted rows)
 GRANT SELECT ON api.workshop_codes TO anon;
+
+-- RPC: anyone can call record_copy (rate-limiting is enforced inside the function)
+GRANT EXECUTE ON FUNCTION api.record_copy(uuid) TO anon, authenticated;

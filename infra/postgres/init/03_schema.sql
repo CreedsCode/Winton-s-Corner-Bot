@@ -99,6 +99,7 @@ CREATE TABLE api.workshop_codes (
   description         text,
   code                text        not null,
   tags                text[]      not null default '{}',
+  copy_count          integer     not null default 0,
 
   constraint title_length       check (char_length(title) between 1 and 120),
   constraint description_length check (description is null or char_length(description) <= 2000),
@@ -112,6 +113,70 @@ CREATE INDEX workshop_codes_by_author
   ON api.workshop_codes (author_identity_id, created_at desc);
 CREATE INDEX workshop_codes_by_tags
   ON api.workshop_codes USING gin (tags);
+
+-- ── Copy count tracking ───────────────────────────────────────────────────────
+
+-- Stores one row per copy event; used only by api.record_copy (SECURITY DEFINER).
+-- No app-role grants — unreachable except through the RPC.
+CREATE TABLE api.workshop_code_copy_events (
+  id          uuid        primary key default gen_random_uuid(),
+  code_id     uuid        not null references api.workshop_codes on delete cascade,
+  identity_id uuid        references api.identities,  -- null for anon
+  client_key  text        not null,  -- identity uuid OR 'ip:<x.x.x.x>'
+  copied_at   timestamptz not null default now()
+);
+
+CREATE INDEX workshop_code_copy_events_dedup
+  ON api.workshop_code_copy_events (code_id, client_key, copied_at desc);
+
+-- RPC called by the frontend after a clipboard copy.
+-- SECURITY DEFINER runs as the schema owner (postgres), bypassing RLS so it can
+-- write workshop_code_copy_events without exposing that table to app roles.
+-- Returns true when the count was incremented, false when rate-limited.
+CREATE OR REPLACE FUNCTION api.record_copy(p_code_id uuid)
+RETURNS boolean
+LANGUAGE plpgsql SECURITY DEFINER
+AS $$
+DECLARE
+  v_claims    jsonb;
+  v_key       text;
+  v_identity  uuid;
+  v_headers   jsonb;
+BEGIN
+  v_claims  := current_setting('request.jwt.claims', true)::jsonb;
+  v_headers := current_setting('request.headers',    true)::jsonb;
+
+  IF v_claims IS NOT NULL AND v_claims->>'active_identity' IS NOT NULL THEN
+    v_identity := (v_claims->>'active_identity')::uuid;
+    v_key      := v_claims->>'active_identity';
+  ELSE
+    v_key := 'ip:' || coalesce(
+      v_headers->>'x-real-ip',
+      split_part(v_headers->>'x-forwarded-for', ',', 1),
+      'unknown'
+    );
+  END IF;
+
+  -- Already copied this code within the last 10 minutes?
+  IF EXISTS (
+    SELECT 1 FROM api.workshop_code_copy_events
+    WHERE code_id    = p_code_id
+      AND client_key = v_key
+      AND copied_at  > now() - interval '10 minutes'
+  ) THEN
+    RETURN false;
+  END IF;
+
+  INSERT INTO api.workshop_code_copy_events (code_id, identity_id, client_key)
+  VALUES (p_code_id, v_identity, v_key);
+
+  UPDATE api.workshop_codes
+  SET copy_count = copy_count + 1
+  WHERE id = p_code_id;
+
+  RETURN true;
+END;
+$$;
 
 -- ── updated_at triggers ───────────────────────────────────────────────────────
 

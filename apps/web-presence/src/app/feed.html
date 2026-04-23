@@ -110,30 +110,53 @@
               ${avatar}
               <span>@${esc(c.author?.handle ?? 'platform')}</span>
               <span class="badge">${esc(c.context?.name ?? 'Monke')}</span>
+              <span class="copy-count">${c.copy_count ?? 0} copies</span>
             </div>
           </div>
         `;
       }).join('');
     }
 
+    // Tracks last copy timestamp per code id (in-memory; resets on page reload)
+    const copyTimestamps = new Map();
+    const COPY_COOLDOWN_MS = 10 * 60 * 1000;
+
     function copyCode(btn, idx) {
-      const code = codes[idx]?.code ?? '';
-      navigator.clipboard.writeText(code).then(() => {
+      const c = codes[idx];
+      const code = c?.code ?? '';
+
+      const now = Date.now();
+      const withinCooldown = (now - (copyTimestamps.get(c.id) ?? 0)) < COPY_COOLDOWN_MS;
+
+      const doFeedback = () => {
         const original = btn.textContent;
         btn.textContent = 'Copied!';
         setTimeout(() => { btn.textContent = original; }, 2000);
-      }).catch(() => {
-        // Fallback for browsers without clipboard API
+      };
+
+      const afterCopy = () => {
+        doFeedback();
+        if (!withinCooldown) {
+          copyTimestamps.set(c.id, now);
+          c.copy_count = (c.copy_count ?? 0) + 1;
+          const countEl = btn.closest('.card')?.querySelector('.copy-count');
+          if (countEl) countEl.textContent = `${c.copy_count} copies`;
+          apiFetch('/rpc/record_copy', {
+            method: 'POST',
+            body: JSON.stringify({ p_code_id: c.id }),
+          }).catch(() => {});
+        }
+      };
+
+      navigator.clipboard.writeText(code).then(afterCopy).catch(() => {
         const ta = document.createElement('textarea');
         ta.value = code;
-        ta.style.position = 'fixed';
-        ta.style.opacity = '0';
+        ta.style.cssText = 'position:fixed;opacity:0';
         document.body.appendChild(ta);
         ta.select();
         document.execCommand('copy');
         document.body.removeChild(ta);
-        btn.textContent = 'Copied!';
-        setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
+        afterCopy();
       });
     }
 

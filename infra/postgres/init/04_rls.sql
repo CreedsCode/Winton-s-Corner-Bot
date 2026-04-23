@@ -8,6 +8,8 @@ ALTER TABLE api.contexts      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE api.memberships   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE api.profile_fields ENABLE ROW LEVEL SECURITY;
 ALTER TABLE api.workshop_codes ENABLE ROW LEVEL SECURITY;
+-- No app-role grants on this table; all access via api.record_copy (SECURITY DEFINER).
+ALTER TABLE api.workshop_code_copy_events ENABLE ROW LEVEL SECURITY;
 
 -- ── persons ──────────────────────────────────────────────────────────────────
 
