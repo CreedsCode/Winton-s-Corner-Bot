@@ -87,7 +87,7 @@ function escAttr(str) {
     return String(str).replace(/'/g, "\\'");
 }
 
-fetch("https://75aea6a8be1f4c7c87bc0c28f117baf6.pages.dev/codes")
+fetch("/api/workshop_codes?origin_context_id=eq.00000000-0000-0000-0001-000000000000&order=created_at.desc")
     .then((r) => r.json())
     .then((codes) => {
         workshopCodes.push(...codes);
