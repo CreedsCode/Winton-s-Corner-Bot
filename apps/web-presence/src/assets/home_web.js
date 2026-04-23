@@ -56,7 +56,7 @@ function renderCodes(codes) {
     `).join('');
 }
 
-fetch("/api/workshop_codes?origin_context_id=eq.00000000-0000-0000-0001-000000000000&order=created_at.desc&limit=5")
+fetch("/api/workshop_codes?origin_context_id=eq.00000000-0000-0000-0001-000000000000&order=copy_count.desc&limit=5")
     .then(r => r.json())
     .then(renderCodes)
     .catch(() => {
