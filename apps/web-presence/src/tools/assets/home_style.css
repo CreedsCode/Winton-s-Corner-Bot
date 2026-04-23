@@ -1,0 +1,427 @@
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap');
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+    --bg:           #0a0e17;
+    --surface:      #111827;
+    --surface-2:    #1a2236;
+    --border:       #2a3347;
+    --primary:      #f06414;
+    --primary-dim:  rgba(240, 100, 20, 0.13);
+    --teal:         #00d4aa;
+    --teal-dim:     rgba(0, 212, 170, 0.13);
+    --yellow:       #f5d020;
+    --yellow-dim:   rgba(245, 208, 32, 0.13);
+    --pink:         #ff6b9d;
+    --text:         #e6edf3;
+    --text-muted:   #8b949e;
+}
+
+/* ── Background dot grid ── */
+body {
+    font-family: 'VT323', monospace;
+    font-size: 20px;
+    line-height: 1.5;
+    background-color: var(--bg);
+    background-image: radial-gradient(circle, #1e2a40 1px, transparent 1px);
+    background-size: 22px 22px;
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ── Animations ── */
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0; }
+}
+
+@keyframes glow-orange {
+    0%, 100% { text-shadow: 0 0 6px var(--primary), 0 0 12px var(--primary); }
+    50%       { text-shadow: 0 0 14px var(--primary), 0 0 28px var(--primary); }
+}
+
+@keyframes glow-teal {
+    0%, 100% { text-shadow: 0 0 6px var(--teal), 0 0 12px var(--teal); }
+    50%       { text-shadow: 0 0 14px var(--teal), 0 0 28px var(--teal); }
+}
+
+@keyframes scanline {
+    0%   { background-position: 0 0; }
+    100% { background-position: 0 100px; }
+}
+
+.blink { animation: blink 1s step-end infinite; }
+
+/* ── Pixel border utility ── */
+.pixel-box {
+    border: 3px solid var(--border);
+    image-rendering: pixelated;
+    position: relative;
+}
+
+.pixel-box::before {
+    content: '';
+    position: absolute;
+    inset: 2px;
+    border: 1px solid rgba(255,255,255,0.04);
+    pointer-events: none;
+}
+
+/* ── Header ── */
+header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--primary);
+    padding: 28px 24px 20px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+/* scanline overlay */
+header::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 3px,
+        rgba(0,0,0,0.08) 3px,
+        rgba(0,0,0,0.08) 4px
+    );
+    pointer-events: none;
+}
+
+.site-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: clamp(1rem, 3vw, 1.7rem);
+    color: var(--primary);
+    animation: glow-orange 2.4s ease-in-out infinite;
+    letter-spacing: 2px;
+    margin-bottom: 10px;
+}
+
+.site-subtitle {
+    font-size: 1.4rem;
+    color: var(--teal);
+    margin-bottom: 14px;
+}
+
+.hit-counter {
+    display: inline-block;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.6rem;
+    color: var(--yellow);
+    background: #000;
+    border: 2px solid var(--yellow);
+    padding: 4px 10px;
+    letter-spacing: 3px;
+}
+
+/* ── Marquee bar ── */
+.marquee-bar {
+    background: var(--primary);
+    color: #fff;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.6rem;
+    padding: 7px 0;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.marquee-bar marquee {
+    display: block;
+}
+
+/* ── Navigation ── */
+nav {
+    background: var(--surface-2);
+    border-bottom: 2px dashed var(--border);
+    padding: 10px 24px;
+    text-align: center;
+}
+
+nav a {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.6rem;
+    color: var(--teal);
+    text-decoration: none;
+    margin: 0 14px;
+    padding: 4px 0;
+    border-bottom: 2px solid transparent;
+    transition: border-color 0.15s, color 0.15s;
+}
+
+nav a:hover {
+    color: var(--yellow);
+    border-bottom-color: var(--yellow);
+}
+
+/* ── Layout ── */
+.page-wrap {
+    flex: 1;
+    max-width: 1100px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 28px 20px;
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    grid-template-rows: auto auto auto;
+    gap: 20px;
+}
+
+/* ── Section shared styles ── */
+.section {
+    background: var(--surface);
+    border: 3px solid var(--border);
+    padding: 20px;
+}
+
+.section-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.65rem;
+    color: var(--yellow);
+    margin-bottom: 14px;
+    padding-bottom: 8px;
+    border-bottom: 2px dashed var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* ── Welcome / About ── */
+.about {
+    grid-column: 1;
+    grid-row: 1;
+}
+
+.about p {
+    font-size: 1.15rem;
+    color: var(--text);
+    line-height: 1.6;
+    margin-bottom: 10px;
+}
+
+.about .highlight {
+    color: var(--primary);
+    font-weight: bold;
+}
+
+.divider {
+    text-align: center;
+    color: var(--primary);
+    font-size: 1rem;
+    letter-spacing: 4px;
+    margin: 12px 0;
+    user-select: none;
+}
+
+/* ── Community Links ── */
+.links {
+    grid-column: 1;
+    grid-row: 3;
+}
+
+.stamp-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.stamp {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--surface-2);
+    border: 2px solid var(--border);
+    padding: 10px 14px;
+    text-decoration: none;
+    color: var(--text);
+    font-size: 1.1rem;
+    transition: border-color 0.15s, background 0.15s;
+}
+
+.stamp:hover {
+    border-color: var(--teal);
+    background: var(--teal-dim);
+    color: var(--teal);
+}
+
+.stamp .stamp-icon {
+    font-size: 1.6rem;
+    flex-shrink: 0;
+}
+
+.stamp .stamp-label {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.55rem;
+    line-height: 1.6;
+}
+
+.stamp .stamp-sub {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    font-family: 'VT323', monospace;
+}
+
+/* ── News & Updates ── */
+.news {
+    grid-column: 2;
+    grid-row: 1 / span 3;
+}
+
+.news-entry {
+    padding: 14px 0;
+    border-bottom: 1px dashed var(--border);
+}
+
+.news-entry:last-child { border-bottom: none; }
+
+.news-date {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.5rem;
+    color: var(--teal);
+    margin-bottom: 6px;
+}
+
+.news-headline {
+    font-size: 1.25rem;
+    color: var(--yellow);
+    margin-bottom: 4px;
+}
+
+.news-body {
+    font-size: 1rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+}
+
+/* ── Top 5 Workshop Codes ── */
+.top5 {
+    grid-column: 1;
+    grid-row: 2;
+}
+
+.codes-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.retro-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 0;
+    border-bottom: 1px dashed var(--border);
+}
+
+.retro-card:last-child { border-bottom: none; }
+
+.retro-rank {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.55rem;
+    color: var(--text-muted);
+    min-width: 20px;
+}
+
+.retro-code {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.65rem;
+    color: var(--yellow);
+    letter-spacing: 2px;
+    flex: 1;
+}
+
+.retro-copy {
+    background: transparent;
+    color: var(--primary);
+    border: 1px solid var(--primary);
+    padding: 3px 8px;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.45rem;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    flex-shrink: 0;
+}
+
+.retro-copy:hover { background: var(--primary); color: #fff; }
+.retro-copy.copied { background: #2ea043; border-color: #2ea043; color: #fff; }
+
+.codes-loading {
+    color: var(--text-muted);
+    font-size: 1rem;
+    padding: 8px 0;
+}
+
+.workshop-cta {
+    margin-top: 14px;
+    text-align: right;
+}
+
+.workshop-cta a {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.55rem;
+    color: var(--teal);
+    text-decoration: none;
+}
+
+.workshop-cta a:hover { text-decoration: underline; }
+
+/* ── Footer ── */
+footer {
+    background: var(--surface);
+    border-top: 3px solid var(--primary);
+    padding: 20px 24px;
+    text-align: center;
+}
+
+.footer-badges {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.badge {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.45rem;
+    padding: 5px 10px;
+    border: 2px solid;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.badge-orange { color: var(--primary); border-color: var(--primary); }
+.badge-teal   { color: var(--teal);    border-color: var(--teal);    }
+.badge-yellow { color: var(--yellow);  border-color: var(--yellow);  }
+.badge-pink   { color: var(--pink);    border-color: var(--pink);    }
+
+footer p {
+    font-size: 1rem;
+    color: var(--text-muted);
+}
+
+footer a {
+    color: var(--primary);
+    text-decoration: none;
+}
+
+footer a:hover { text-decoration: underline; }
+
+/* ── Responsive ── */
+@media (max-width: 720px) {
+    .page-wrap {
+        grid-template-columns: 1fr;
+    }
+    .about  { grid-column: 1; grid-row: 1; }
+    .news   { grid-column: 1; grid-row: 2; }
+    .links  { grid-column: 1; grid-row: 3; }
+    .top5   { grid-column: 1; grid-row: 4; }
+
+    .retro-card { gap: 8px; }
+}
