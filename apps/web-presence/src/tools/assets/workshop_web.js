@@ -41,7 +41,7 @@ function renderCards() {
         return `
             <div class="card">
                 <div class="card-code">${escHtml(entry.code)}</div>
-                <div class="card-description">${escHtml(entry.description)}</div>
+                <div class="card-description"><b>${escHtml(entry.title)}</b> – ${escHtml(entry.description)}</div>
                 ${tagChips ? `<div class="card-tags">${tagChips}</div>` : ''}
                 <button class="copy-btn" onclick="copyCode(this, '${escAttr(entry.code)}')">Copy Code</button>
             </div>
