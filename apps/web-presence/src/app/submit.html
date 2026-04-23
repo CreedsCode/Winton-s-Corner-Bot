@@ -37,26 +37,26 @@
       <form id="submit-form">
         <div class="form-group">
           <label for="title">Title <span class="accent">*</span></label>
-          <input type="text" id="title" maxlength="120" required
-                 placeholder="e.g. Skip team assembly phase">
+          <input type="text" id="title" maxlength="32" required
+                 placeholder="Aim Trainer">
         </div>
 
         <div class="form-group">
           <label for="description">Description</label>
-          <textarea id="description" rows="3"
-                    placeholder="What does this code do? (optional)"></textarea>
+          <textarea id="description" rows="3" maxlength="120"
+                    placeholder="A super short description about the workshop mode"></textarea>
         </div>
 
         <div class="form-group">
-          <label for="code">Workshop Script <span class="accent">*</span></label>
-          <textarea id="code" class="code-input" rows="14" required
-                    placeholder="Paste your Workshop script here&hellip;"></textarea>
+          <label for="code">Workshop Code<span class="accent">*</span></label>
+          <input type="text" id="code" minlength="4" maxlength="8" required
+                 placeholder="X1Y7JA">
         </div>
 
         <div class="form-group">
-          <label for="tags">Tags <span class="muted">(comma-separated, optional)</span></label>
-          <input type="text" id="tags"
-                 placeholder="e.g. practice, utility, fun">
+          <label for="tags">Tags <span class="muted">(comma-separated)</span></label>
+          <input type="text" id="tags" maxlength="70"
+                 placeholder="practice, utility, fun">
         </div>
 
         <button type="submit" class="btn submit-btn">Submit Code</button>
