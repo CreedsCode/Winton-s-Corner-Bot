@@ -98,14 +98,12 @@ CREATE TABLE api.workshop_codes (
   title               text        not null,
   description         text,
   code                text        not null,
-  game                text        not null default 'overwatch_2',
-  category            text,
   tags                text[]      not null default '{}',
 
   constraint title_length       check (char_length(title) between 1 and 120),
   constraint description_length check (description is null or char_length(description) <= 2000),
-  constraint code_length        check (char_length(code) between 1 and 50000),
-  constraint tags_count         check (cardinality(tags) <= 10)
+  constraint code_length        check (char_length(code) between 4 and 8),
+  constraint tags_count         check (cardinality(tags) <= 5)
 );
 
 CREATE INDEX workshop_codes_by_origin
