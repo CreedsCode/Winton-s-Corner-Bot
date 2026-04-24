@@ -67,11 +67,12 @@ async function renderWorkshopCodes() {
     container.innerHTML = codes
         .slice(0, 5)
         .map((code, idx) => {
-            const codeValue = code.code || code.id || 'N/A';
+            const title = code.title;
+            const codeValue = code.code;
             return `
             <div class="code-item">
                 <span class="code-rank">#${idx + 1}</span>
-                <span class="code-code">${codeValue}</span>
+                <span class="code-code">${escapeHtml(title)}</span>
                 <button class="code-copy-btn" onclick="copyCode(this, '${codeValue.replace(/'/g, "\\'")}')" title="Copy code">COPY</button>
             </div>
         `;
