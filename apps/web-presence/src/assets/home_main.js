@@ -69,11 +69,12 @@ async function renderWorkshopCodes() {
         .map((code, idx) => {
             const title = code.title;
             const codeValue = code.code;
+            const codeId = code.id;
             return `
             <div class="code-item">
                 <span class="code-rank">#${idx + 1}</span>
                 <span class="code-code">${escapeHtml(title)}</span>
-                <button class="code-copy-btn" onclick="copyCode(this, '${codeValue.replace(/'/g, "\\'")}')" title="Copy code">COPY</button>
+                <button class="code-copy-btn" onclick="copyCode(this, '${codeValue.replace(/'/g, "\\'")}', '${codeId.replace(/'/g, "\\'")}')" title="Copy code">COPY</button>
             </div>
         `;
         })
@@ -151,7 +152,7 @@ function formatDate(dateString) {
 /**
  * Copy workshop code to clipboard with visual feedback
  */
-function copyCode(button, code) {
+function copyCode(button, code, codeId) {
     const finish = (ok) => {
         button.textContent = ok ? '✓ COPIED' : 'COPY';
         if (ok) button.classList.add('copied');
@@ -167,6 +168,11 @@ function copyCode(button, code) {
             console.error('Failed to copy code:', err);
             finish(false);
         });
+    
+    fetch('/api/rpc/record_copy', {
+        method: 'POST',
+        body: JSON.stringify({ p_code_id: codeId }),
+    }).catch(() => {});
 }
 
 document.addEventListener('DOMContentLoaded', async function () {
