@@ -1,11 +1,3 @@
-/**
- * home_main.js - Main Controller
- * Handles all data fetching and DOM rendering for Winton's Corner homepage
- */
-
-/**
- * Escape HTML special characters to prevent injection
- */
 function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
@@ -18,26 +10,6 @@ const FILTERED_CHANNEL_IDS = [
     '1455182523905605775',
     '1455182413054476308'
 ];
-
-const COMMUNITY_LINKS = [
-    { name: 'PUGs Lobby', url: 'https://pugs.at/winton' }
-];
-
-/**
- * Render community links in the sidebar
- */
-function renderCommunityLinks() {
-    const container = document.getElementById('community-links');
-    if (!container) return;
-
-    container.innerHTML = COMMUNITY_LINKS
-        .map(link => `
-            <a href="${link.url}" target="_blank" rel="noopener noreferrer" class="community-link">
-                ${link.name}
-            </a>
-        `)
-        .join('');
-}
 
 /**
  * Fetch and render Discord voice channels
@@ -196,18 +168,11 @@ function copyCode(button, code) {
         });
 }
 
-/**
- * Initialize the page - fetch and render all sections
- */
-async function initializePage() {
-    renderCommunityLinks();
-
+document.addEventListener('DOMContentLoaded', async function () {
     await Promise.all([
         renderVoiceChannels(),
         renderWorkshopCodes(),
         renderLFGFeed(),
         renderNews()
     ]);
-}
-
-document.addEventListener('DOMContentLoaded', initializePage);
+});

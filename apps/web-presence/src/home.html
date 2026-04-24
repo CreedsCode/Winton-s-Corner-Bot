@@ -10,7 +10,6 @@
     <link rel="stylesheet" href="assets/home_style.css">
 </head>
 <body>
-    <!-- Header -->
     <header>
         <div class="site-title">✦ Winton's Corner ✦</div>
         <p class="site-subtitle">
@@ -18,18 +17,15 @@
         </p>
     </header>
 
-    <!-- Navigation -->
     <nav>
         <a href="/home">🏠 Home</a>
         <a href="/workshops">🔧 Workshops</a>
     </nav>
 
-    <!-- Main Container: 3-Column Layout -->
     <div class="page-wrap">
 
-        <!-- LEFT SIDEBAR -->
         <aside class="sidebar left-sidebar">
-            <!-- Voice Channels -->
+
             <div class="section card pixel-box">
                 <h2 class="section-title">🎙️ Active Channels</h2>
                 <div id="voice-channels" class="channels-list">
@@ -38,16 +34,17 @@
                 <a href="/" target="_blank" rel="noopener" class="discord-join-btn">Join Discord server</a>
             </div>
 
-            <!-- Community Links -->
+            
             <div class="section card pixel-box">
                 <h2 class="section-title">🔗 Community Links</h2>
                 <div id="community-links" class="link-list">
-                    <p class="loading-text">Loading links <span class="blink">▌</span></p>
+                    <!-- Community Links -->
+                    <a href="https://pugs.at/winton" target="_blank" rel="noopener noreferrer" class="community-link">PUGs Lobby</a>
+                    <!-- Community Links End -->
                 </div>
             </div>
         </aside>
 
-        <!-- CENTER: LFG FEED -->
         <main class="feed-section">
             <div class="section pixel-box" style="height: 100%; display: flex; flex-direction: column;">
                 <h2 class="section-title">🎮 Looking For Group</h2>
@@ -57,9 +54,7 @@
             </div>
         </main>
 
-        <!-- RIGHT SIDEBAR -->
         <aside class="sidebar right-sidebar">
-            <!-- Latest News -->
             <div class="section card pixel-box">
                 <h2 class="section-title">📰 Latest News</h2>
                 <div id="news-section" class="news-item">
@@ -67,7 +62,6 @@
                 </div>
             </div>
 
-            <!-- Top 5 Workshop Codes -->
             <div class="section card pixel-box">
                 <h2 class="section-title">🏆 Top 5 Workshop Codes</h2>
                 <div id="workshop-codes" class="codes-list">
@@ -78,12 +72,10 @@
         </aside>
     </div>
 
-    <!-- Footer -->
     <footer>
         <p>&copy; 2026 Winton's Corner Community</p>
     </footer>
 
-    <!-- Scripts -->
     <script src="assets/home_api.js"></script>
     <script src="assets/home_main.js"></script>
 </body>
