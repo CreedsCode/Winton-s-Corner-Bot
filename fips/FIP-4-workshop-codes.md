@@ -57,7 +57,14 @@ create index workshop_codes_by_author
 
 create index workshop_codes_by_tags
   on workshop_codes using gin (tags);
+
+-- Automatically refresh updated_at on PATCH/UPDATE (api.set_updated_at defined in FIP-3).
+create trigger workshop_codes_updated_at
+  before update on workshop_codes
+  for each row execute function api.set_updated_at();
 ```
+
+`updated_at` is maintained automatically by the `workshop_codes_updated_at` trigger. Implementations MUST NOT rely on callers to supply `updated_at` on update.
 
 ### Field semantics
 

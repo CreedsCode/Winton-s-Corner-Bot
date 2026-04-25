@@ -55,7 +55,23 @@ create unique index profile_fields_global_unique
 
 create index profile_fields_by_person
   on profile_fields (author_identity_id, scope_context_id);
+
+-- Automatically refresh updated_at on PATCH/UPDATE.
+-- This function is defined once here; subsequent content FIPs reuse it.
+create or replace function api.set_updated_at()
+returns trigger language plpgsql as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
+create trigger profile_fields_updated_at
+  before update on profile_fields
+  for each row execute function api.set_updated_at();
 ```
+
+`updated_at` is maintained automatically by the `profile_fields_updated_at` trigger. Implementations MUST NOT rely on callers to supply or increment `updated_at`; the trigger is normative because the resolution query in §Resolution sorts on it.
 
 The base contract columns (`author_identity_id`, `origin_context_id`, `visibility`, `created_at`) follow SPEC.md §5.1.
 
