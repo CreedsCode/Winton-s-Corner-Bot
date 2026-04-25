@@ -20,6 +20,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     environment:
       - DISCORD_CLIENT_ID=${DISCORD_CLIENT_ID}
       - DISCORD_CLIENT_SECRET=${DISCORD_CLIENT_SECRET}
@@ -38,17 +40,43 @@ services:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=${API_DB_NAME}
-      - AUTHENTICATOR_PASSWORD=${AUTHENTICATOR_PASSWORD}
-      - BOT_DB_NAME=${BOT_DB_NAME}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
+      # - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro # now using dbmate for migrations, so no need for init scripts. Keep this here for reference until dbmate is fully adopted and tested.
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${API_DB_NAME}"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 30s
+
+  migrate:
+    image: ghcr.io/amacneil/dbmate
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./db:/db
+    environment:
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - API_DB_NAME=${API_DB_NAME}
+      - AUTHENTICATOR_PASSWORD=${AUTHENTICATOR_PASSWORD}
+      # Disable schema dump: dbmate's post-migration dump makes a second connection and
+      # pgx re-encodes the space in `options` as `+`, causing a harmless FATAL in
+      # the postgres log. Disabling avoids that noise.
+      - DBMATE_NO_DUMP_SCHEMA=true
+    # Build the DATABASE_URL at runtime so AUTHENTICATOR_PASSWORD is passed as a
+    # PostgreSQL GUC via the `options` connection parameter. This is required because
+    # dbmate uses the Go database driver (not psql) and cannot process \getenv
+    # meta-commands. The migration reads the password via current_setting().
+    # `$$VAR` in docker-compose = literal `$VAR`, expanded by the sh shell.
+    # Requirement: AUTHENTICATOR_PASSWORD must not contain URL-special chars (?, &, #, %).
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >-
+        dbmate
+        --url "postgresql://postgres:$$POSTGRES_PASSWORD@postgres:5432/$$API_DB_NAME?options=-c%20app.authenticator_password%3D$$AUTHENTICATOR_PASSWORD"
+        up
 
   postgrest:
     image: postgrest/postgrest:v12.2.3
@@ -65,6 +93,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
 
   # TODO discord-bot:
 

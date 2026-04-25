@@ -24,6 +24,7 @@ The protocol is defined in [`spec/SPEC.md`](spec/SPEC.md). Changes are governed 
 | `nginx` | `apps/web-presence` | Static frontend + reverse proxy for `/auth/` and `/api/` |
 | `auth-shim` | `apps/auth-shim` | Discord OAuth2 → JWT issuance (FastAPI + asyncpg) |
 | `postgres` | `infra/postgres` | PostgreSQL with RLS; two databases: `wintondb` (API) and `botdb` (bot) |
+| `migrate` | `db/migrations/` | dbmate sidecar — applies schema migrations before other services start |
 | `postgrest` | (upstream image) | Auto-generated REST API from `wintondb.api` schema |
 | `discord-bot` | `apps/discord-bot` | Overwatch leaderboard, voice channels, invite analytics (Python, discord.py) |
 
@@ -72,7 +73,8 @@ Edit `.env` — the required values are:
 docker compose up -d
 ```
 
-PostgreSQL initializes on first boot. If you're upgrading from a previous volume, wipe it first:
+On first start, the `migrate` sidecar applies all migrations before PostgREST or
+auth-shim come up. To wipe the volume and re-apply from scratch:
 
 ```bash
 docker compose down -v && docker compose up -d
@@ -86,6 +88,56 @@ curl http://localhost/auth/me          # should return {"role":"web_anon"}
 ```
 
 The frontend is at `http://localhost`. The web app is at `http://localhost/app/`.
+
+---
+
+## Database Migrations
+
+Schema is managed with [dbmate](https://github.com/amacneil/dbmate). Migrations
+live in `db/migrations/` and are applied automatically at startup by the `migrate`
+sidecar service before PostgREST or auth-shim start.
+
+### Migration filename convention
+
+`YYYYMMDDHHmmss_<description>.sql` — timestamp prefix ensures order. dbmate
+generates the timestamp automatically with `dbmate new`.
+
+### Creating a new migration
+
+```bash
+# From a container (no local dbmate install needed):
+docker compose run --rm migrate new <description>
+
+# Or with a local dbmate install:
+dbmate --migrations-dir db/migrations new <description>
+```
+
+This creates `db/migrations/<timestamp>_<description>.sql` with empty
+`-- migrate:up` and `-- migrate:down` sections to fill in.
+
+### Applying migrations
+
+```bash
+# Apply as part of a normal stack start:
+docker compose up
+
+# Apply only migrations (postgres must already be running):
+docker compose up migrate
+```
+
+### Rolling back the last migration
+
+```bash
+docker compose run --rm migrate \
+  --url "postgresql://postgres:$POSTGRES_PASSWORD@postgres:5432/$API_DB_NAME" \
+  down
+```
+
+### Full reset (wipe volume and re-apply from scratch)
+
+```bash
+docker compose down -v && docker compose up
+```
 
 ---
 
@@ -149,8 +201,10 @@ The bot requires `Manage Server` and `Manage Channels` permissions to track invi
 │   ├── auth-shim/      # FastAPI OAuth + JWT service
 │   ├── discord-bot/    # Python Discord bot
 │   └── web-presence/   # Nginx config + static frontend
+├── db/
+│   └── migrations/     # dbmate versioned migrations
 ├── infra/
-│   └── postgres/       # Dockerfile + init scripts for PostgreSQL
+│   └── postgres/       # Dockerfile for PostgreSQL (custom image with pgjwt)
 ├── fips/               # Federation Improvement Proposals
 ├── spec/
 │   └── SPEC.md         # The protocol specification (v0.1.0)
