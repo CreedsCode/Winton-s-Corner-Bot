@@ -1,4 +1,5 @@
 import os
+import re
 import secrets
 import time
 from datetime import datetime, timedelta, timezone
@@ -120,9 +121,12 @@ async def discord_callback(request: Request, code: str, state: str):
 
     discord_id = user["id"]
     handle = user["username"]
+    avatar_hash = user.get("avatar")
+    if avatar_hash and not re.fullmatch(r"[a-f0-9_]+", avatar_hash):
+        raise HTTPException(status_code=400, detail="Invalid avatar hash")
     avatar_url = (
-        f"https://cdn.discordapp.com/avatars/{discord_id}/{user['avatar']}.png"
-        if user.get("avatar")
+        f"https://cdn.discordapp.com/avatars/{discord_id}/{avatar_hash}.png"
+        if avatar_hash
         else None
     )
 
