@@ -1,6 +1,7 @@
 import os
 import secrets
 import time
+from datetime import datetime, timedelta, timezone
 
 import asyncpg
 import httpx
@@ -93,7 +94,11 @@ async def discord_callback(request: Request, code: str, state: str):
         )
         if token_resp.status_code != 200:
             raise HTTPException(status_code=400, detail="Discord token exchange failed")
-        access_token = token_resp.json()["access_token"]
+        tok              = token_resp.json()
+        access_token     = tok["access_token"]
+        refresh_token    = tok.get("refresh_token")
+        expires_in       = tok.get("expires_in", 604800)  # Discord default: 7 days
+        token_expires_at = datetime.now(timezone.utc) + timedelta(seconds=expires_in)
 
         # Fetch authenticated user's identity (FIP-2 §fetchIdentity)
         user_resp = await client.get(
@@ -155,6 +160,19 @@ async def discord_callback(request: Request, code: str, state: str):
                 "UPDATE api.persons SET primary_identity_id = $1 WHERE id = $2",
                 identity_id, person_id,
             )
+
+        # Store/refresh Discord OAuth tokens for out-of-band re-verification
+        await conn.execute(
+            "INSERT INTO api.discord_tokens "
+            "  (identity_id, access_token, refresh_token, token_expires_at) "
+            "VALUES ($1, $2, $3, $4) "
+            "ON CONFLICT (identity_id) DO UPDATE SET "
+            "  access_token     = EXCLUDED.access_token, "
+            "  refresh_token    = EXCLUDED.refresh_token, "
+            "  token_expires_at = EXCLUDED.token_expires_at, "
+            "  updated_at       = now()",
+            identity_id, access_token, refresh_token, token_expires_at,
+        )
 
         # Sync Monke membership (v1: Monke is the only context)
         guild_ids = {g["id"] for g in guilds}
