@@ -2,6 +2,7 @@
 import hashlib, re
 from pathlib import Path
 import rjsmin, rcssmin
+import shutil
 
 SRC = Path("src")
 OUT = Path("public")
@@ -72,3 +73,12 @@ for p in files:
         rel_posix = p.relative_to(SRC).as_posix()
         manifest[rel_posix] = (p.relative_to(SRC).parent / p.name).as_posix()
         buffer[rel_posix] = b
+
+for p in SRC.rglob('*'):
+    if not p.is_file():
+        continue
+    if p.suffix in ('.js', '.css', '.html'):
+        continue
+    out_path = OUT / p.relative_to(SRC)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(p, out_path)
