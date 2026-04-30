@@ -2,18 +2,26 @@ version: "3.9"
 
 services:
   nginx:
-    build:
-      context: ./apps/web-presence
+    build: ./apps/web-presence
     expose:
       - "80"
     restart: unless-stopped
     depends_on:
       - postgrest
       - auth-shim
+  discord-bot:
+    build: ./apps/discord-bot
+    depends_on:
+      - mongo
+    environment:
+      - PYTHONUNBUFFERED=1
+      - TOKEN=${TOKEN}
+      - MONGO_URI=mongodb://mongo:27017/wintonbot
+    restart: unless-stopped
+    working_dir: /app
 
   auth-shim:
-    build:
-      context: ./apps/auth-shim
+    build: ./apps/auth-shim
     expose:
       - "80"
     restart: unless-stopped
@@ -31,8 +39,7 @@ services:
       - FRONTEND_URL=${FRONTEND_URL}
 
   postgres:
-    build:
-      context: ./infra/postgres
+    build: ./infra/postgres
     restart: unless-stopped
     expose:
       - "5432"
@@ -77,9 +84,6 @@ services:
         dbmate
         --url "postgresql://postgres:$$POSTGRES_PASSWORD@postgres:5432/$$API_DB_NAME?options=-c%20app.authenticator_password%3D$$AUTHENTICATOR_PASSWORD"
         up
-
-  postgrest:
-    image: postgrest/postgrest:v12.2.3
     restart: unless-stopped
     expose:
       - "3000"
@@ -95,8 +99,6 @@ services:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully
-
-  # TODO discord-bot:
 
 volumes:
   postgres_data:
