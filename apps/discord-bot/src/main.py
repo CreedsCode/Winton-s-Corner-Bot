@@ -19,12 +19,13 @@ server_invites = {}
 # Target invite code to track
 TARGET_INVITE_CODE = os.getenv('TARGET_INVITE_CODE', 'GbjrfMQey2')
 
-COCKS = [
+EXTENSIONS = [
+    "commands.config"
     # "cogs.leaderboard"
 ]
 
-for cock in COCKS:
-    bot.load_extensions(cock)
+for extension in EXTENSIONS:
+    bot.load_extensions(extension)
 
 
 @bot.event
