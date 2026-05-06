@@ -9,10 +9,11 @@ services:
     depends_on:
       - postgrest
       - auth-shim
+
   discord-bot:
     build: ./apps/discord-bot
     depends_on:
-      - mongo
+      - postgres
     environment:
       - PYTHONUNBUFFERED=1
       - TOKEN=${TOKEN}
@@ -84,6 +85,9 @@ services:
         dbmate
         --url "postgresql://postgres:$$POSTGRES_PASSWORD@postgres:5432/$$API_DB_NAME?options=-c%20app.authenticator_password%3D$$AUTHENTICATOR_PASSWORD"
         up
+
+  postgrest:
+    image: postgrest/postgrest:v12.2.3
     restart: unless-stopped
     expose:
       - "3000"
