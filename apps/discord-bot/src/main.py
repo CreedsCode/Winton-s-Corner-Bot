@@ -119,6 +119,7 @@ async def on_voice_state_update(member: discord.Member, before: discord.VoiceSta
         new_channel = await member.guild.create_voice_channel(
             name=member.display_name + "'s Channel",
             category=after.channel.category,
+            bitrate=member.guild.bitrate_limit,
             overwrites={
                 member: discord.PermissionOverwrite(
                     move_members=True,
