@@ -3,12 +3,12 @@ import os
 
 import discord
 from dotenv import load_dotenv
-import mongo
+# import mongo
 import posthog_tracker
 
 load_dotenv()
 
-mongo.init(os.getenv('MONGO_URI', 'mongodb://mongo:27017/wintonbot'), 'winton_bot')
+# mongo.init(os.getenv('MONGO_URI', 'mongodb://mongo:27017/wintonbot'), 'winton_bot')
 posthog_tracker.init()
 
 bot = discord.Bot(debug_guilds=os.getenv('BOT_DEV_GUILDS', '1425571463192121354').split(';'))
@@ -20,7 +20,7 @@ server_invites = {}
 TARGET_INVITE_CODE = os.getenv('TARGET_INVITE_CODE', 'GbjrfMQey2')
 
 COCKS = [
-    "cogs.leaderboard"
+    # "cogs.leaderboard"
 ]
 
 for cock in COCKS:
@@ -41,9 +41,9 @@ async def on_ready():
             print(f"Missing permissions to fetch invites for guild: {guild.name}")
     
     # start leaderboard updates
-    leaderboard_cog = bot.get_cog("Leaderboard")
-    if leaderboard_cog:
-        await leaderboard_cog.update_leaderboard()
+    # leaderboard_cog = bot.get_cog("Leaderboard")
+    # if leaderboard_cog:
+    #     await leaderboard_cog.update_leaderboard()
 
 
 CHANNEL_CREATE_CHANNEL_NAME = '[CREATE CHANNEL]'
@@ -73,19 +73,19 @@ async def on_member_join(member: discord.Member):
             print(f"Member {member.name} (ID: {member.id}) joined using invite: {invite_code}")
             
             # Store join event in MongoDB
-            joins_collection = mongo.get_collection('invite_joins')
-            join_data = {
-                'user_id': str(member.id),
-                'username': member.name,
-                'discriminator': member.discriminator,
-                'invite_code': invite_code,
-                'guild_id': str(member.guild.id),
-                'guild_name': member.guild.name,
-                'joined_at': member.joined_at,
-                'created_at': member.created_at,
-                'is_bot': member.bot
-            }
-            joins_collection.insert_one(join_data)
+            # joins_collection = mongo.get_collection('invite_joins')
+            # join_data = {
+            #     'user_id': str(member.id),
+            #     'username': member.name,
+            #     'discriminator': member.discriminator,
+            #     'invite_code': invite_code,
+            #     'guild_id': str(member.guild.id),
+            #     'guild_name': member.guild.name,
+            #     'joined_at': member.joined_at,
+            #     'created_at': member.created_at,
+            #     'is_bot': member.bot
+            # }
+            # joins_collection.insert_one(join_data)
             
             # Track conversion in PostHog if it matches target invite
             if invite_code == TARGET_INVITE_CODE:
@@ -140,39 +140,39 @@ async def vc_users(ctx: discord.ApplicationContext):
     await ctx.respond("Users in your voice channel:\n\n" + "\n".join(names), ephemeral=True)
 
 
-@bot.slash_command(name="invite_stats", description="View invite conversion statistics")
-async def invite_stats(ctx: discord.ApplicationContext, invite_code: str = TARGET_INVITE_CODE):
-    """Display statistics for a specific invite code"""
-    try:
-        joins_collection = mongo.get_collection('invite_joins')
+# @bot.slash_command(name="invite_stats", description="View invite conversion statistics")
+# async def invite_stats(ctx: discord.ApplicationContext, invite_code: str = TARGET_INVITE_CODE):
+#     """Display statistics for a specific invite code"""
+#     try:
+#         joins_collection = mongo.get_collection('invite_joins')
         
-        # Get all joins for this invite code
-        joins = list(joins_collection.find({'invite_code': invite_code}))
-        total_joins = len(joins)
+#         # Get all joins for this invite code
+#         joins = list(joins_collection.find({'invite_code': invite_code}))
+#         total_joins = len(joins)
         
-        # Get unique users (excluding bots)
-        unique_users = len([j for j in joins if not j.get('is_bot', False)])
-        bots = total_joins - unique_users
+#         # Get unique users (excluding bots)
+#         unique_users = len([j for j in joins if not j.get('is_bot', False)])
+#         bots = total_joins - unique_users
         
-        embed = discord.Embed(
-            title=f"📊 Invite Statistics: {invite_code}",
-            color=discord.Color.blue()
-        )
-        embed.add_field(name="Total Joins", value=str(total_joins), inline=True)
-        embed.add_field(name="Unique Users", value=str(unique_users), inline=True)
-        embed.add_field(name="Bots", value=str(bots), inline=True)
+#         embed = discord.Embed(
+#             title=f"📊 Invite Statistics: {invite_code}",
+#             color=discord.Color.blue()
+#         )
+#         embed.add_field(name="Total Joins", value=str(total_joins), inline=True)
+#         embed.add_field(name="Unique Users", value=str(unique_users), inline=True)
+#         embed.add_field(name="Bots", value=str(bots), inline=True)
         
-        if joins:
-            # Get most recent joins
-            recent = sorted(joins, key=lambda x: x.get('joined_at', ''), reverse=True)[:5]
-            recent_text = '\n'.join([f"• {j['username']} - <t:{int(j['joined_at'].timestamp())}:R>" for j in recent if j.get('joined_at')])
-            if recent_text:
-                embed.add_field(name="Recent Joins", value=recent_text, inline=False)
+#         if joins:
+#             # Get most recent joins
+#             recent = sorted(joins, key=lambda x: x.get('joined_at', ''), reverse=True)[:5]
+#             recent_text = '\n'.join([f"• {j['username']} - <t:{int(j['joined_at'].timestamp())}:R>" for j in recent if j.get('joined_at')])
+#             if recent_text:
+#                 embed.add_field(name="Recent Joins", value=recent_text, inline=False)
         
-        await ctx.respond(embed=embed, ephemeral=True)
+#         await ctx.respond(embed=embed, ephemeral=True)
         
-    except Exception as e:
-        await ctx.respond(f"Error fetching stats: {str(e)}", ephemeral=True)
+#     except Exception as e:
+#         await ctx.respond(f"Error fetching stats: {str(e)}", ephemeral=True)
 
 
 if __name__ == '__main__':
@@ -180,4 +180,4 @@ if __name__ == '__main__':
         bot.run(os.getenv('TOKEN'))
     finally:
         posthog_tracker.shutdown()
-        mongo.close()
+        # mongo.close()
