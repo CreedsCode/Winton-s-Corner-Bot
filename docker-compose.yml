@@ -83,7 +83,7 @@ services:
     command:
       - >-
         dbmate
-        --url "postgresql://postgres:$$POSTGRES_PASSWORD@postgres:5432/$$API_DB_NAME?options=-c%20app.authenticator_password%3D$$AUTHENTICATOR_PASSWORD"
+        --url "postgresql://postgres:$$POSTGRES_PASSWORD@postgres:5432/$$API_DB_NAME?sslmode=disable&options=-c%20app.authenticator_password%3D$$AUTHENTICATOR_PASSWORD"
         up
 
   postgrest:
