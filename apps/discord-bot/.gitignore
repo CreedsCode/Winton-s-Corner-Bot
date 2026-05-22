@@ -16,5 +16,9 @@ ENV/
 .mypy_cache/
 .ruff_cache/
 
+# Local SQLite files
+*.db
+*.sqlite3
+
 # Editor/project files
 .idea/

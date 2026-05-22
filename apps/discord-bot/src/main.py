@@ -4,6 +4,7 @@ import os
 import discord
 from dotenv import load_dotenv
 # import mongo
+import glue_store
 import posthog_tracker
 
 load_dotenv()
@@ -21,7 +22,8 @@ TARGET_INVITE_CODE = os.getenv('TARGET_INVITE_CODE', 'GbjrfMQey2')
 
 EXTENSIONS = [
     "commands.config",
-    "commands.invite"
+    "commands.invite",
+    "commands.glue"
     # "cogs.leaderboard"
 ]
 
@@ -114,7 +116,11 @@ async def on_member_join(member: discord.Member):
 async def on_voice_state_update(member: discord.Member, before: discord.VoiceState, after: discord.VoiceState):
     if before.channel is not None:
         channel_to_delete = before.channel
-        if channel_to_delete.name != CHANNEL_CREATE_CHANNEL_NAME and len(channel_to_delete.voice_states) == 0:
+        if (
+            channel_to_delete.name != CHANNEL_CREATE_CHANNEL_NAME
+            and len(channel_to_delete.voice_states) == 0
+            and not glue_store.is_channel_glued(member.guild.id, channel_to_delete.id)
+        ):
             await channel_to_delete.delete(reason='Channel is empty and was therefore deleted.')
 
     if after.channel is not None and after.channel.name == CHANNEL_CREATE_CHANNEL_NAME:
