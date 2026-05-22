@@ -20,7 +20,8 @@ server_invites = {}
 TARGET_INVITE_CODE = os.getenv('TARGET_INVITE_CODE', 'GbjrfMQey2')
 
 EXTENSIONS = [
-    "commands.config"
+    "commands.config",
+    "commands.invite"
     # "cogs.leaderboard"
 ]
 
