@@ -3,6 +3,8 @@ import asyncio
 import discord
 from discord.ext import commands
 
+import invite_store
+
 
 TEMP_INVITE_DURATION_SECONDS = 20 * 60
 
@@ -10,53 +12,70 @@ TEMP_INVITE_DURATION_SECONDS = 20 * 60
 class Invite(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        # {(guild_id, channel_id, user_id): {"previous_overwrite": PermissionOverwrite | None, "task": asyncio.Task}}
+        # {(guild_id, channel_id, user_id): asyncio.Task}
         self.temporary_voice_invites = {}
 
+    async def _restore_temporary_invites(self):
+        """Restore temporary invites from database on bot startup."""
+        rows = invite_store.get_all_temporary_invites()
+        for guild_id, channel_id, user_id, had_view_channel in rows:
+            expiration_task = asyncio.create_task(
+                self.expire_temporary_voice_invite(
+                    guild_id=guild_id,
+                    channel_id=channel_id,
+                    user_id=user_id
+                )
+            )
+            key = (guild_id, channel_id, user_id)
+            self.temporary_voice_invites[key] = expiration_task
+
     def cog_unload(self):
-        for invite_state in self.temporary_voice_invites.values():
-            expiration_task = invite_state["task"]
+        for expiration_task in self.temporary_voice_invites.values():
             if not expiration_task.done():
                 expiration_task.cancel()
         self.temporary_voice_invites.clear()
 
-    @staticmethod
-    def _clone_permission_overwrite(overwrite: discord.PermissionOverwrite) -> discord.PermissionOverwrite:
-        allow, deny = overwrite.pair()
-        return discord.PermissionOverwrite.from_pair(allow, deny)
-
     async def revoke_temporary_voice_invite(self, guild_id: int, channel_id: int, user_id: int, reason: str):
         key = (guild_id, channel_id, user_id)
-        invite_state = self.temporary_voice_invites.pop(key, None)
-        if invite_state is None:
-            return
-
-        expiration_task = invite_state["task"]
-        if expiration_task is not asyncio.current_task() and not expiration_task.done():
+        expiration_task = self.temporary_voice_invites.pop(key, None)
+        if expiration_task is not None and expiration_task is not asyncio.current_task() and not expiration_task.done():
             expiration_task.cancel()
 
         guild = self.bot.get_guild(guild_id)
         if guild is None:
+            invite_store.remove_temporary_invite(guild_id, channel_id, user_id)
             return
 
         channel = guild.get_channel(channel_id)
         if not isinstance(channel, discord.VoiceChannel):
+            invite_store.remove_temporary_invite(guild_id, channel_id, user_id)
             return
 
         member = guild.get_member(user_id)
         permission_target = member if member is not None else discord.Object(id=user_id)
-        previous_overwrite = invite_state["previous_overwrite"]
+        had_view_channel = invite_store.get_temporary_invite(guild_id, channel_id, user_id)
 
         try:
-            if previous_overwrite is None:
-                await channel.set_permissions(permission_target, overwrite=None, reason=reason)
-            else:
-                await channel.set_permissions(permission_target, overwrite=previous_overwrite, reason=reason)
+            # Only remove view_channel if they didn't have it before
+            if had_view_channel is not None:
+                if not had_view_channel:
+                    # User didn't have view_channel before, so remove it
+                    existing_overwrite = channel.overwrites.get(permission_target)
+                    if existing_overwrite is not None:
+                        new_overwrite = discord.PermissionOverwrite.from_pair(*existing_overwrite.pair())
+                        new_overwrite.view_channel = None
+                        await channel.set_permissions(permission_target, overwrite=new_overwrite, reason=reason)
+                    else:
+                        # No overwrite exists, do nothing (view_channel was already revoked)
+                        pass
+                # If they had view_channel before, we leave it as is
         except (discord.Forbidden, discord.HTTPException) as exc:
             print(
                 f"Failed to revoke temporary invite permissions for user {user_id} "
                 f"in channel {channel_id}: {exc}"
             )
+        finally:
+            invite_store.remove_temporary_invite(guild_id, channel_id, user_id)
 
     async def expire_temporary_voice_invite(self, guild_id: int, channel_id: int, user_id: int):
         try:
@@ -117,22 +136,18 @@ class Invite(commands.Cog):
         key = (ctx.guild.id, voice_channel.id, user.id)
         existing_invite = self.temporary_voice_invites.get(key)
 
-        if existing_invite is None:
-            existing_overwrite = voice_channel.overwrites.get(user)
-            previous_overwrite = (
-                self._clone_permission_overwrite(existing_overwrite)
-                if existing_overwrite is not None
-                else None
-            )
-        else:
-            previous_overwrite = existing_invite["previous_overwrite"]
-            existing_task = existing_invite["task"]
-            if not existing_task.done():
-                existing_task.cancel()
+        # Check if user already had view_channel permission
+        existing_overwrite = voice_channel.overwrites.get(user)
+        had_view_channel = existing_overwrite is not None and existing_overwrite.view_channel is True
 
+        # Cancel existing task if any
+        if existing_invite is not None and not existing_invite.done():
+            existing_invite.cancel()
+
+        # Grant view_channel permission
         updated_overwrite = (
-            self._clone_permission_overwrite(previous_overwrite)
-            if previous_overwrite is not None
+            discord.PermissionOverwrite.from_pair(*existing_overwrite.pair())
+            if existing_overwrite is not None
             else discord.PermissionOverwrite()
         )
         updated_overwrite.view_channel = True
@@ -156,6 +171,10 @@ class Invite(commands.Cog):
             )
             return
 
+        # Store in database
+        invite_store.add_temporary_invite(ctx.guild.id, voice_channel.id, user.id, had_view_channel)
+
+        # Create expiration task
         expiration_task = asyncio.create_task(
             self.expire_temporary_voice_invite(
                 guild_id=ctx.guild.id,
@@ -163,10 +182,7 @@ class Invite(commands.Cog):
                 user_id=user.id
             )
         )
-        self.temporary_voice_invites[key] = {
-            "previous_overwrite": previous_overwrite,
-            "task": expiration_task
-        }
+        self.temporary_voice_invites[key] = expiration_task
 
         await ctx.respond(
             f"{user.mention} can now view **{voice_channel.name}** for 20 minutes "

@@ -3,11 +3,15 @@ import os
 
 import discord
 from dotenv import load_dotenv
+import db
 # import mongo
 import glue_store
 import posthog_tracker
 
 load_dotenv()
+
+# Initialize database
+db.init_db()
 
 # mongo.init(os.getenv('MONGO_URI', 'mongodb://mongo:27017/wintonbot'), 'winton_bot')
 posthog_tracker.init()
@@ -34,6 +38,11 @@ for extension in EXTENSIONS:
 @bot.event
 async def on_ready():
     print(f"{bot.user} is ready and online!")
+    
+    # Restore temporary invites from database
+    invite_cog = bot.get_cog("Invite")
+    if invite_cog is not None:
+        await invite_cog._restore_temporary_invites()
     
     # Cache invites for all guilds
     for guild in bot.guilds:
