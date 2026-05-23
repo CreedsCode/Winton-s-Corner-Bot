@@ -6,8 +6,7 @@ from discord.ext import commands
 import invite_store
 
 
-TEMP_INVITE_DURATION_SECONDS = 20 * 60
-
+TEMP_INVITE_DURATION_MINUTES = 10
 
 class Invite(commands.Cog):
     def __init__(self, bot):
@@ -82,7 +81,7 @@ class Invite(commands.Cog):
 
     async def expire_temporary_voice_invite(self, guild_id: int, channel_id: int, user_id: int):
         try:
-            await asyncio.sleep(TEMP_INVITE_DURATION_SECONDS)
+            await asyncio.sleep(TEMP_INVITE_DURATION_MINUTES * 60)
         except asyncio.CancelledError:
             return
 
@@ -90,7 +89,7 @@ class Invite(commands.Cog):
             guild_id=guild_id,
             channel_id=channel_id,
             user_id=user_id,
-            reason="Temporary /invite access expired after 20 minutes."
+            reason=f"Temporary access expired after {TEMP_INVITE_DURATION_MINUTES} minutes."
         )
 
     @commands.Cog.listener()
@@ -102,7 +101,7 @@ class Invite(commands.Cog):
             guild_id=member.guild.id,
             channel_id=after.channel.id,
             user_id=member.id,
-            reason="Temporary /invite access revoked after joining the voice channel."
+            reason="Temporary access consumed."
         )
 
     @commands.slash_command(
@@ -133,7 +132,7 @@ class Invite(commands.Cog):
             return
 
         if not voice_channel.permissions_for(bot_member).manage_channels:
-            await ctx.respond("I need **Manage Channels** permission to update voice channel permissions.", ephemeral=True)
+            await ctx.respond("I need `Manage Channels` permission to update voice channel permissions.", ephemeral=True)
             return
 
         key = (ctx.guild.id, voice_channel.id, user.id)
@@ -159,7 +158,7 @@ class Invite(commands.Cog):
             await voice_channel.set_permissions(
                 user,
                 overwrite=updated_overwrite,
-                reason=f"Temporary /invite access granted by {ctx.author} for 20 minutes."
+                reason=f"Temporary access granted by {ctx.author} for {TEMP_INVITE_DURATION_MINUTES} minutes."
             )
         except discord.Forbidden:
             await ctx.respond(
@@ -188,7 +187,7 @@ class Invite(commands.Cog):
         self.temporary_voice_invites[key] = expiration_task
 
         await ctx.respond(
-            f"{user.mention} can now view **{voice_channel.name}** for 20 minutes "
+            f"{user.mention} can now view `{voice_channel.name}` for {TEMP_INVITE_DURATION_MINUTES} minutes "
             f"or until they join the channel.",
             ephemeral=True
         )
