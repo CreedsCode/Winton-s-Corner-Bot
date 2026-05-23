@@ -64,10 +64,13 @@ class Invite(commands.Cog):
                     if existing_overwrite is not None:
                         new_overwrite = discord.PermissionOverwrite.from_pair(*existing_overwrite.pair())
                         new_overwrite.view_channel = None
-                        await channel.set_permissions(permission_target, overwrite=new_overwrite, reason=reason)
-                    else:
-                        # No overwrite exists, do nothing (view_channel was already revoked)
-                        pass
+                        
+                        # If all permissions are now neutral, remove the entire override
+                        allow, deny = new_overwrite.pair()
+                        if allow.value == 0 and deny.value == 0:
+                            await channel.set_permissions(permission_target, overwrite=None, reason=reason)
+                        else:
+                            await channel.set_permissions(permission_target, overwrite=new_overwrite, reason=reason)
                 # If they had view_channel before, we leave it as is
         except (discord.Forbidden, discord.HTTPException) as exc:
             print(
