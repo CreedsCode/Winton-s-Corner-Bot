@@ -17,7 +17,7 @@ def init_db():
     with get_connection() as connection:
         connection.execute(
             """
-            CREATE TABLE IF NOT EXISTS glued_channels (
+            CREATE TABLE IF NOT EXISTS temporary_voice_channels (
                 guild_id INTEGER NOT NULL,
                 channel_id INTEGER NOT NULL,
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,

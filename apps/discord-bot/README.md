@@ -80,7 +80,6 @@ The bot automatically tracks when users join via specific Discord invites and se
 
 - `/invite @user` - Temporarily allow a user to view your current voice channel (20 minutes or until they join)
 - `/vcusers` - Show users in your current voice channel
-- `/glue` - Mark your current voice channel as permanent so empty-channel cleanup will not delete it (disabled by default)
 - `/invite_stats [invite_code]` - View statistics for a specific invite code
 
 ### Required Bot Permissions

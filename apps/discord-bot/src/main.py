@@ -5,8 +5,8 @@ import discord
 from dotenv import load_dotenv
 import db
 # import mongo
-import glue_store
 import posthog_tracker
+import temporary_channel_store
 
 load_dotenv()
 
@@ -26,8 +26,7 @@ TARGET_INVITE_CODE = os.getenv('TARGET_INVITE_CODE', 'GbjrfMQey2')
 
 EXTENSIONS = [
     "commands.config",
-    "commands.invite",
-    "commands.glue"
+    "commands.invite"
     # "cogs.leaderboard"
 ]
 
@@ -128,9 +127,13 @@ async def on_voice_state_update(member: discord.Member, before: discord.VoiceSta
         if (
             channel_to_delete.name != CHANNEL_CREATE_CHANNEL_NAME
             and len(channel_to_delete.voice_states) == 0
-            and not glue_store.is_channel_glued(member.guild.id, channel_to_delete.id)
+            and temporary_channel_store.is_temporary_channel(member.guild.id, channel_to_delete.id)
         ):
-            await channel_to_delete.delete(reason='Channel is empty and was therefore deleted.')
+            try:
+                await channel_to_delete.delete(reason='Temporary channel is empty.')
+            except discord.NotFound:
+                pass
+            temporary_channel_store.remove_temporary_channel(member.guild.id, channel_to_delete.id)
 
     if after.channel is not None and after.channel.name == CHANNEL_CREATE_CHANNEL_NAME:
         new_channel = await member.guild.create_voice_channel(
@@ -144,6 +147,7 @@ async def on_voice_state_update(member: discord.Member, before: discord.VoiceSta
                 )
             }
         )
+        temporary_channel_store.add_temporary_channel(member.guild.id, new_channel.id)
         await member.move_to(new_channel)
 
 
