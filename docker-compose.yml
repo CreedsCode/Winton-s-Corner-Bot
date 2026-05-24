@@ -20,6 +20,8 @@ services:
       - MONGO_URI=mongodb://mongo:27017/wintonbot
     restart: unless-stopped
     working_dir: /app
+    volumes:
+      - "discordbot_data:/app/data"
 
   auth-shim:
     build: ./apps/auth-shim
@@ -106,3 +108,4 @@ services:
 
 volumes:
   postgres_data:
+  discordbot_data:
