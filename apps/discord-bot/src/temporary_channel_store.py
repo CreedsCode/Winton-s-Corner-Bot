@@ -26,3 +26,11 @@ def remove_temporary_channel(guild_id: int, channel_id: int):
             (guild_id, channel_id)
         )
         connection.commit()
+
+
+def get_all_temporary_channels() -> list[tuple[int, int]]:
+    with db.get_connection() as connection:
+        rows = connection.execute(
+            "SELECT guild_id, channel_id FROM temporary_voice_channels"
+        ).fetchall()
+        return rows

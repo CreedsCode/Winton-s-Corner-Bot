@@ -37,6 +37,24 @@ for extension in EXTENSIONS:
 @bot.event
 async def on_ready():
     print(f"{bot.user} is ready and online!")
+
+    # Remove stale temporary channel records for channels that no longer exist.
+    for guild_id, channel_id in temporary_channel_store.get_all_temporary_channels():
+        guild = bot.get_guild(guild_id)
+        if guild is None:
+            temporary_channel_store.remove_temporary_channel(guild_id, channel_id)
+            continue
+
+        channel = guild.get_channel(channel_id)
+        if channel is not None:
+            continue
+
+        try:
+            await guild.fetch_channel(channel_id)
+        except discord.NotFound:
+            temporary_channel_store.remove_temporary_channel(guild_id, channel_id)
+        except discord.Forbidden:
+            pass
     
     # Restore temporary invites from database
     invite_cog = bot.get_cog("Invite")
