@@ -2,7 +2,7 @@ import os
 
 import discord
 from dotenv import load_dotenv
-import db
+from stores import db
 # import mongo
 import posthog_tracker
 

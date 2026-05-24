@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 
-import temporary_channel_store
+from stores import temporary_channel_store
 
 
 CHANNEL_CREATE_CHANNEL_NAME = '[CREATE CHANNEL]'

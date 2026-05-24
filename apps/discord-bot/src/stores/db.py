@@ -3,7 +3,7 @@ from pathlib import Path
 import os
 
 
-DATA_DIR = Path(os.getenv('DATA_DIR', Path(__file__).resolve().parent))
+DATA_DIR = Path(os.getenv('DATA_DIR', Path(__file__).resolve().parent.parent))
 DB_PATH = DATA_DIR / "bot.db"
 
 

@@ -1,4 +1,4 @@
-import db
+from stores import db
 
 
 def add_temporary_channel(guild_id: int, channel_id: int):

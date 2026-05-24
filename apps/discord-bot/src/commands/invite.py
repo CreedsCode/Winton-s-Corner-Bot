@@ -3,7 +3,7 @@ import asyncio
 import discord
 from discord.ext import commands
 
-import invite_store
+from stores import invite_store
 
 
 TEMP_INVITE_DURATION_MINUTES = 10

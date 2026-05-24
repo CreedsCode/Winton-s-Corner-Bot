@@ -1,4 +1,4 @@
-import db
+from stores import db
 
 
 def add_temporary_invite(guild_id: int, channel_id: int, user_id: int, had_view_channel: bool):
