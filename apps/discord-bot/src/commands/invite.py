@@ -13,6 +13,7 @@ class Invite(commands.Cog):
         self.bot = bot
         # {(guild_id, channel_id, user_id): asyncio.Task}
         self.temporary_voice_invites = {}
+        self._temporary_invites_restored = False
 
     async def _restore_temporary_invites(self):
         """Restore temporary invites from database on bot startup."""
@@ -27,6 +28,12 @@ class Invite(commands.Cog):
             )
             key = (guild_id, channel_id, user_id)
             self.temporary_voice_invites[key] = expiration_task
+
+    @commands.Cog.listener()
+    async def on_ready(self):
+        if not self._temporary_invites_restored:
+            await self._restore_temporary_invites()
+            self._temporary_invites_restored = True
 
     def cog_unload(self):
         for expiration_task in self.temporary_voice_invites.values():
