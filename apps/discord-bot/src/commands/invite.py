@@ -23,7 +23,8 @@ class Invite(commands.Cog):
                 self.expire_temporary_voice_invite(
                     guild_id=guild_id,
                     channel_id=channel_id,
-                    user_id=user_id
+                    user_id=user_id,
+                    duration_minutes=TEMP_INVITE_DURATION_MINUTES 
                 )
             )
             key = (guild_id, channel_id, user_id)
@@ -82,9 +83,9 @@ class Invite(commands.Cog):
         finally:
             invite_store.remove_temporary_invite(guild_id, channel_id, user_id)
 
-    async def expire_temporary_voice_invite(self, guild_id: int, channel_id: int, user_id: int, duration_minutes: int = TEMP_INVITE_DURATION_MINUTES):
+    async def expire_temporary_voice_invite(self, guild_id: int, channel_id: int, user_id: int, duration_minutes: int):
         try:
-            await asyncio.sleep(duration_minutes)
+            await asyncio.sleep(60 * duration_minutes)
         except asyncio.CancelledError:
             return
 
